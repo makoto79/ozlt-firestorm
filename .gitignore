@@ -130,3 +130,6 @@ firestorm.code-workspace
 .github/release.yaml
 
 checks.json
+build_viewer.log
+build_viewer.exitcode
+build_viewer.cmd

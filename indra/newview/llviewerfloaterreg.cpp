@@ -120,6 +120,7 @@
 // #include "llfloaterperformance.h" <FS:Beq/> restore fsperf  floater
 #include "fsfloaterperformance.h"
 #include "llfloaterperms.h"
+#include "llfloaterphotogrammetry.h"
 #include "llfloaterpreference.h"
 #include "llfloaterpreferencesgraphicsadvanced.h"
 #include "llfloaterpreferenceviewadvanced.h"
@@ -539,6 +540,7 @@ void LLViewerFloaterReg::registerFloaters()
     LLFloaterReg::add("people", "floater_people.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterSidePanelContainer>);
     //LLFloaterReg::add("performance", "floater_performance.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterPerformance>);
     LLFloaterReg::add("perms_default", "floater_perms_default.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterPermsDefault>);
+    LLFloaterReg::add("photogrammetry", "floater_photogrammetry.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterPhotogrammetry>);
     LLFloaterReg::add("places", "floater_places.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterSidePanelContainer>);
     LLFloaterReg::add("preferences", "floater_preferences.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterPreference>);
     // LLFloaterReg::add("prefs_graphics_advanced", "floater_preferences_graphics_advanced.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterPreferenceGraphicsAdvanced>);

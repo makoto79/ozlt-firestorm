@@ -535,6 +535,13 @@ set(viewer_SOURCE_FILES
     llmarketplacenotifications.cpp
     llmaterialeditor.cpp
     llmaterialmgr.cpp
+    llmcphttpnode.cpp
+    llmcptoolregistry.cpp
+    llmcptools.cpp
+    llmcptoolsenvironment.cpp
+    llmcptoolsinventory.cpp
+    llmcptoolssocial.cpp
+    llmcptoolsworld.cpp
     llmediactrl.cpp
     llmediadataclient.cpp
     llmenuoptionpathfindingrebakenavmesh.cpp
@@ -1400,6 +1407,9 @@ set(viewer_HEADER_FILES
     llmarketplacenotifications.h
     llmaterialeditor.h
     llmaterialmgr.h
+    llmcphttpnode.h
+    llmcptoolregistry.h
+    llmcptools.h
     llmediactrl.h
     llmediadataclient.h
     llmenuoptionpathfindingrebakenavmesh.h

@@ -733,5 +733,112 @@
 
     </panel>
 
+    <panel
+     top_pad="5"
+     bottom="-1"
+     left="1"
+     right="-1"
+     follows="all"
+     label="MCP Server"
+     name="tab-mcp">
+
+		<text
+		 type="string"
+		 length="1"
+		 follows="left|top"
+		 font="SansSerifBold"
+		 height="16"
+		 layout="topleft"
+		 left="15"
+		 name="mcp_server_label"
+		 top="15"
+		 width="480">
+			MCP Server (AI Remote Control)
+		</text>
+
+		<text
+		 type="string"
+		 length="1"
+		 follows="left|top"
+		 height="40"
+		 layout="topleft"
+		 left="15"
+		 mouse_opaque="false"
+		 name="mcp_server_description"
+		 top_pad="5"
+		 width="480"
+		 wrap="true">
+			Runs a local server that lets AI assistants (e.g. Claude Desktop, Cursor) control this viewer via the Model Context Protocol. Disabled by default and only reachable from this machine (127.0.0.1).
+		</text>
+
+		<check_box
+		 control_name="MCPServerEnabled"
+		 height="16"
+		 label="Enable MCP server"
+		 layout="topleft"
+		 left="15"
+		 name="mcp_server_enabled"
+		 top_pad="15"
+		 width="480" />
+
+		<spinner
+		 control_name="MCPServerPort"
+		 enabled_control="MCPServerEnabled"
+		 decimal_digits="0"
+		 follows="left|top"
+		 height="23"
+		 increment="1"
+		 label="Port number:"
+		 label_width="90"
+		 layout="topleft"
+		 left="35"
+		 max_val="65535"
+		 min_val="1024"
+		 name="mcp_server_port"
+		 top_pad="10"
+		 width="200" />
+
+		<text
+		 type="string"
+		 length="1"
+		 follows="left|top"
+		 height="10"
+		 layout="topleft"
+		 left="35"
+		 name="mcp_server_token_label"
+		 top_pad="15"
+		 width="480">
+			Auth token (optional, leave empty to disable):
+		</text>
+
+		<line_editor
+		 control_name="MCPServerAuthToken"
+		 enabled_control="MCPServerEnabled"
+		 follows="left|top"
+		 height="23"
+		 layout="topleft"
+		 left="35"
+		 max_length_chars="256"
+		 name="mcp_server_token"
+		 top_pad="5"
+		 width="400" />
+
+		<text
+		 layout="topleft"
+		 follows="top|left"
+		 left="15"
+		 type="string"
+		 length="1"
+		 height="20"
+		 mouse_opaque="false"
+		 name="mcp_server_restart_note"
+		 top_pad="25"
+		 width="480"
+		 font.style="BOLD">
+			Changes here require a viewer restart to take effect.
+		</text>
+
+    </panel>
+
     </tab_container>
 </panel>

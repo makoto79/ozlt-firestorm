@@ -53,6 +53,8 @@
 #include "llkeyconflict.h" // for legacy keybinding support, remove later
 #include "llmarketplacefunctions.h"
 #include "llmarketplacenotifications.h"
+#include "llmcphttpnode.h"
+#include "llmcptools.h"
 #include "llmd5.h"
 #include "llmeshrepository.h"
 #include "llpumpio.h"
@@ -1444,6 +1446,15 @@ bool LLAppViewer::init()
 
     // Create IO Pump to use for HTTP Requests.
     gServicePump = new LLPumpIO(gAPRPoolp);
+
+    // Start the local MCP server (AI remote-control), if enabled. Must
+    // come after gServicePump exists since the listener is hung off of it.
+    registerMCPCoreTools();
+    registerMCPSocialTools();
+    registerMCPWorldTools();
+    registerMCPEnvironmentTools();
+    registerMCPInventoryTools();
+    LLMCPHttpServer::startIfEnabled();
 
     // Note: this is where gLocalSpeakerMgr and gActiveSpeakerMgr used to be instantiated.
 

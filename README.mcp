@@ -1,0 +1,164 @@
+# MCP Server — Firestorm AI Remote Control
+
+The MCP (Model Context Protocol) server lets AI assistants (Claude
+Desktop, and any other Streamable-HTTP MCP client) control this viewer
+over a local, plain-HTTP JSON-RPC endpoint.
+
+## Activation
+
+1. Start the viewer.
+2. Preferences → **Network & Files** → tab **"MCP Server"**.
+3. Check "Enable MCP server", optionally set a custom port (default
+   `13231`) and an auth token.
+4. Restart the viewer. **Changes to this setting only take effect after
+   a restart** — there is no live start/stop (see [Architecture](#architecture)).
+
+A toast notification confirms the server is active each time it starts.
+
+## Connection
+
+The server listens on `http://127.0.0.1:<port>/mcp` (default port
+`13231`) and speaks JSON-RPC 2.0 over plain HTTP — not HTTPS, and only
+reachable from this machine.
+
+### Claude Desktop
+
+Claude Desktop's *Settings → Connectors → Add custom connector* dialog
+requires an `https://` URL and will reject a local `http://` server.
+Instead, edit `claude_desktop_config.json` directly (on Windows,
+`%APPDATA%\Claude\claude_desktop_config.json`) and restart Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "firestorm": {
+      "url": "http://127.0.0.1:13231/mcp"
+    }
+  }
+}
+```
+
+### Custom client (Python example)
+
+```python
+import httpx
+
+resp = httpx.post("http://127.0.0.1:13231/mcp", json={
+    "jsonrpc": "2.0", "method": "tools/list", "id": 1
+})
+print(resp.json())
+```
+
+## Available Tools
+
+### Movement / interaction
+| Tool | Parameters | Notes |
+|------|-----------|-------|
+| `avatar_sit` | `obj_uuid` or `position` {x,y,z} (optional) | Sits on the ground if neither given. Fire-and-forget. |
+| `avatar_stand` | — | Fire-and-forget. |
+| `avatar_walk_to` | `target_global` {x,y,z} (required), `stop_distance` | Autopilot; returns immediately, poll `get_position`. |
+| `avatar_teleport` | `regionname` (required), `x`, `y`, `z` | Fire-and-forget. |
+| `avatar_fly` | `enabled` (default true) | Returns resulting flying state. |
+
+### Chat
+| Tool | Parameters | Notes |
+|------|-----------|-------|
+| `chat_say` | `message` (required), `channel` (default 0) | 1s cooldown (shared with `chat_shout`). |
+| `chat_shout` | `message` (required), `channel` (default 0) | Same cooldown as `chat_say`. |
+
+### World / info
+| Tool | Parameters | Notes |
+|------|-----------|-------|
+| `get_position` | — | Region + global position, region name. |
+| `get_region_info` | — | Name, handle, origin, water height, maturity. |
+| `get_nearby_agents` | `radius` (default 96m) | Nearby avatars: id, name, position, distance. |
+| `list_nearby_objects` | — | Objects in view (id, name, owner, distance). Asynchronous (~3s); call again if some names are still missing. |
+
+### Environment
+| Tool | Parameters | Notes |
+|------|-----------|-------|
+| `get_environment` | — | Sun/moon azimuth+elevation (deg), cloud settings, haze/fog settings. |
+| `set_environment` | `sun`, `moon` {azimuth, elevation}; `clouds` {color, scale, shadow, variance, scroll_x/y}; `haze` {density, horizon, blue_density, blue_horizon, distance_multiplier} | PATCH semantics — only given fields change. Applies instantly. |
+
+### Social
+| Tool | Parameters | Notes |
+|------|-----------|-------|
+| `list_friends` | — | Friends list: id, name, display name, online status. |
+| `get_avatar_profile` | `avatar_id` (required) | About text, join date, partner, groups, picks, notes. Asynchronous (~15s timeout). |
+| `set_avatar_notes` | `avatar_id`, `text` (required) | Overwrites profile notes (server-stored). Fire-and-forget. |
+| `get_chat_history` | `avatar_id` (required), `max_lines` (default 200) | Reads the locally saved 1:1 IM transcript. |
+
+### Inventory
+| Tool | Parameters | Notes |
+|------|-----------|-------|
+| `inventory_list` | `folder_id` (default My Inventory root) | Direct subfolders + items of a folder. |
+| `notecard_write` | `name`, `text` (required), `folder_id` (default Notecards folder) | Creates a new notecard. Asynchronous (~20s timeout: item creation + asset upload). |
+
+Call `tools/list` for the full JSON schema of each tool.
+
+## Security
+
+- Disabled by default (`MCPServerEnabled = FALSE`).
+- Binds to **127.0.0.1 only**, never `0.0.0.0`.
+- Optional bearer token via `Authorization: Bearer <token>` header,
+  compared in constant time.
+- Per-tool flood guard (min. 200ms between repeated calls to the same
+  tool); `chat_say`/`chat_shout` additionally share a 1s cooldown.
+- All requests are handled on the viewer's main thread (the same thread
+  that runs the rest of the viewer) — no cross-thread synchronization
+  needed, but also no request runs concurrently with anything else.
+- A toast notification appears whenever the server starts, so it's hard
+  to forget remote control is active for the session.
+
+## Architecture
+
+```
+HTTP POST /mcp (127.0.0.1:<port>, JSON-RPC 2.0, plain text)
+        │
+        ▼
+LLMCPHttpNode::post()            (llmcphttpnode.cpp)
+        │  auth check, JSON <-> LLSD (boost::json + llsdjson)
+        ▼
+LLMCPToolRegistry::handleRequest (llmcptoolregistry.cpp)
+        │  JSON-RPC dispatch, rate limiting, tool lookup
+        ▼
+Tool handler (llmcptools*.cpp)   - callback-based: most tools reply
+        │                          immediately; a few (get_avatar_profile,
+        │                          list_nearby_objects, notecard_write)
+        │                          complete later, after a network
+        │                          round-trip or a fixed settle time.
+        ▼
+LLSD result -> JSON-RPC response -> back through LLMCPHttpNode
+```
+
+The HTTP transport is a small, purpose-built `LLChainIOFactory`/`LLSocket`
+wrapper (not `LLIOHTTPServer::create()`, which crashes on a port conflict
+and offers no way to stop a running listener) hung off the viewer's
+existing `gServicePump`. It starts once at viewer launch if enabled -
+there is intentionally no live stop/restart.
+
+Where possible, tools bridge to event pumps the viewer already exposes
+internally (`LLAgent` for movement, `LLChatBar` for chat, `LLInventory`
+for inventory listing) rather than reimplementing viewer logic. See
+[FEATURE_MCP.md](FEATURE_MCP.md) for the full design rationale and
+per-phase implementation notes.
+
+## Implementation
+
+| File | Purpose |
+|------|---------|
+| `indra/newview/llmcphttpnode.h/.cpp` | HTTP transport, auth, server lifecycle. |
+| `indra/newview/llmcptoolregistry.h/.cpp` | JSON-RPC dispatch, tool registry, rate limiting. |
+| `indra/newview/llmcptools.cpp` | Movement, chat, and read-only core tools. |
+| `indra/newview/llmcptoolssocial.cpp` | Profile, notes, chat history, friends list. |
+| `indra/newview/llmcptoolsworld.cpp` | Nearby object listing. |
+| `indra/newview/llmcptoolsenvironment.cpp` | Sky/environment read + patch. |
+| `indra/newview/llmcptoolsinventory.cpp` | Inventory listing, notecard creation. |
+| `indra/newview/skins/default/xui/en/panel_preferences_setup.xml` | Preferences UI (Network & Files → MCP Server tab). |
+| `indra/newview/app_settings/settings.xml` | `MCPServerEnabled`, `MCPServerPort`, `MCPServerAuthToken`. |
+
+## MCP Protocol
+
+The server implements JSON-RPC 2.0 with `initialize`, `ping`,
+`tools/list`, and `tools/call`. Details:
+https://modelcontextprotocol.io

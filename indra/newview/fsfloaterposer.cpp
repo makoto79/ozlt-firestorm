@@ -118,6 +118,8 @@ FSFloaterPoser::FSFloaterPoser(const LLSD& key) : LLFloater(key)
     mCommitCallbackRegistrar.add("Poser.CommitSlider", [this](LLUICtrl* slider, const LLSD& data) { onCommitSlider(slider, data); });
     mCommitCallbackRegistrar.add("Poser.Symmetrize", [this](LLUICtrl*, const LLSD& data) { onClickSymmetrize(data); });
 
+    mCommitCallbackRegistrar.add("Poser.StartStopPose", [this](LLUICtrl*, const LLSD&) { onRightStartStopPose(); });
+
     mLoadPoseTimer = new FSLoadPoseTimer(boost::bind(&FSFloaterPoser::timedReload, this));
 }
 
@@ -253,6 +255,13 @@ bool FSFloaterPoser::postBuild()
     mScaleZSpnr              = getChild<LLUICtrl>("adv_scalez_spinner");
 
     mBtnJointRotate = getChild<LLButton>("button_joint_rotate_tool");
+
+    mRightAvatarList = getChild<LLScrollListCtrl>("right_avatar_list");
+    mRightAvatarList->setCommitOnSelectionChange(true);
+    mRightAvatarList->setCommitCallback([this](LLUICtrl*, const LLSD&) { onRightAvatarSelect(); });
+
+    mRightAvatarRefreshBtn = getChild<LLButton>("right_avatar_refresh");
+    mRightStartStopBtn = getChild<LLButton>("right_start_stop_btn");
 
     return true;
 }
@@ -1501,7 +1510,12 @@ bool FSFloaterPoser::havePermissionToAnimateOtherAvatar(LLVOAvatar* avatar) cons
     if (!avatar || avatar->isDead())
         return false;
 
-    return false;
+    // Posing another avatar's joints is purely local: FSPoserAnimator drives
+    // LLJoint state directly on our own LLVOAvatar instance for rendering,
+    // it never sends anything over the network. So this only changes what
+    // we see/screenshot, never what the posed avatar or anyone else sees -
+    // no consent-from-them mechanism needed, same as local derendering.
+    return true;
 }
 
 void FSFloaterPoser::poseControlsEnable(bool enable)
@@ -2026,6 +2040,13 @@ E_BoneDeflectionStyles FSFloaterPoser::getUiSelectedBoneDeflectionStyle() const
 
 LLVOAvatar* FSFloaterPoser::getUiSelectedAvatar() const
 {
+    if (!mRightSelectedAvatarId.isNull())
+    {
+        LLVOAvatar* avatar = getAvatarByUuid(mRightSelectedAvatarId);
+        if (avatar)
+            return avatar;
+    }
+
     LLScrollListItem* item = mAvatarSelectionScrollList->getFirstSelected();
     if (!item)
         return nullptr;
@@ -2508,6 +2529,10 @@ E_PoserReferenceFrame FSFloaterPoser::getReferenceFrame() const
 /// </summary>
 void FSFloaterPoser::onAvatarSelect()
 {
+    mRightSelectedAvatarId.setNull();
+    if (mRightAvatarList)
+        mRightAvatarList->deselectAllItems();
+
     LLVOAvatar* avatar = getUiSelectedAvatar();
     if (!avatar)
         return;
@@ -2520,6 +2545,11 @@ void FSFloaterPoser::onAvatarSelect()
     {
         FSToolCompPose::getInstance()->setAvatar(avatar);
         FSToolCompPoseTranslate::getInstance()->setAvatar(avatar);
+        // Sync the manipulator joint with the UI selection when switching
+        // avatars. Without this, mJoint in FSManipRotateJoint stays stale/
+        // nullptr and anchor points + gimbal don't appear.
+        auto selectedJoints = getUiSelectedPoserJoints();
+        updateManipWithFirstSelectedJoint(selectedJoints);
     }
     else
     {
@@ -2698,6 +2728,115 @@ void FSFloaterPoser::onAvatarsRefresh()
 
     mAvatarSelectionScrollList->updateLayout();
     refreshTextHighlightingOnAvatarScrollList();
+    populateRightAvatarList();
+}
+
+void FSFloaterPoser::onRightAvatarRefresh()
+{
+    populateRightAvatarList();
+}
+
+void FSFloaterPoser::onRightAvatarSelect()
+{
+    LLScrollListItem* item = mRightAvatarList->getFirstSelected();
+    if (!item)
+    {
+        mRightSelectedAvatarId.setNull();
+        mRightStartStopBtn->setEnabled(false);
+        return;
+    }
+
+    mRightSelectedAvatarId = item->getValue().asUUID();
+    LLVOAvatar* avatar = getAvatarByUuid(mRightSelectedAvatarId);
+    if (!avatar)
+    {
+        mRightStartStopBtn->setEnabled(false);
+        return;
+    }
+
+    bool isPosing = mPoserAnimator.isPosingAvatar(avatar);
+    mRightStartStopBtn->setEnabled(true);
+    mRightStartStopBtn->setValue(isPosing);
+
+    FSToolCompPose::getInstance()->setAvatar(avatar);
+    FSToolCompPoseTranslate::getInstance()->setAvatar(avatar);
+    setVisualManipulators(avatar);
+
+    refreshJointScrollListMembers();
+    onJointTabSelect();
+    poseControlsEnable(true);
+    refreshTextHighlightingOnJointScrollLists();
+}
+
+void FSFloaterPoser::onRightStartStopPose()
+{
+    if (mRightSelectedAvatarId.isNull())
+        return;
+
+    LLVOAvatar* avatar = getAvatarByUuid(mRightSelectedAvatarId);
+    if (!avatar)
+        return;
+
+    bool isPosing = mPoserAnimator.isPosingAvatar(avatar);
+    if (isPosing)
+    {
+        mPoserAnimator.stopPosingAvatar(avatar);
+        mRightStartStopBtn->setValue(false);
+    }
+    else
+    {
+        mPoserAnimator.tryPosingAvatar(avatar);
+        mRightStartStopBtn->setValue(true);
+    }
+}
+
+void FSFloaterPoser::populateRightAvatarList()
+{
+    if (!mRightAvatarList)
+        return;
+
+    mRightAvatarList->clearRows();
+
+    for (LLCharacter* character : LLCharacter::sInstances)
+    {
+        LLVOAvatar* avatar = dynamic_cast<LLVOAvatar*>(character);
+        if (!avatar)
+            continue;
+
+        if (avatar->isDead())
+            continue;
+
+        if (avatar->isControlAvatar())
+            continue;
+
+        if (LLMuteList::getInstance()->isMuted(avatar->getID()))
+            continue;
+
+        if (!gAgentAvatarp || gAgentAvatarp.isNull())
+            continue;
+
+        LLVector3 separation = avatar->getCharacterPosition() - gAgentAvatarp->getCharacterPosition();
+        if (separation.magVec() >= 10.f)
+            continue;
+
+        LLAvatarName av_name;
+        if (!LLAvatarNameCache::get(avatar->getID(), &av_name))
+            continue;
+
+        LLSD row;
+        row["columns"][COL_ICON]["column"] = "icon";
+        row["columns"][COL_ICON]["value"]  = "";
+        row["columns"][COL_NAME]["column"] = "name";
+        row["columns"][COL_NAME]["value"]  = av_name.getDisplayName();
+        row["columns"][COL_UUID]["column"] = "uuid";
+        row["columns"][COL_UUID]["value"]  = avatar->getID();
+        row["columns"][COL_SAVE]["column"] = "saveFileName";
+        row["columns"][COL_SAVE]["value"]  = "";
+        row["value"]                       = avatar->getID();
+        mRightAvatarList->addElement(row, ADD_BOTTOM);
+    }
+
+    mRightAvatarList->updateLayout();
 }
 
 std::string FSFloaterPoser::getIconNameForAvatar(LLVOAvatar* avatar)

@@ -86,7 +86,8 @@ print(resp.json())
 | `list_friends` | — | Friends list: id, name, display name, online status. |
 | `get_avatar_profile` | `avatar_id` (required) | About text, join date, partner, groups, picks, notes. Asynchronous (~15s timeout). |
 | `set_avatar_notes` | `avatar_id`, `text` (required) | Overwrites profile notes (server-stored). Fire-and-forget. |
-| `get_chat_history` | `avatar_id` (required), `max_lines` (default 200) | Reads the locally saved 1:1 IM transcript. |
+| `get_chat_history` | `avatar_id` (required), `max_lines` (default 200), `offset` (default: last page) | Reads the locally saved 1:1 IM transcript, paginated. Response has `total_messages`/`offset`/`returned`/`has_more` — page through the whole history via `offset=0`, then `offset += returned` while `has_more`. Passing `offset` loads the full transcript instead of just the recent tail, so paging can reach the entire history. |
+| `send_im` | `avatar_id`, `message` (required) | Sends a 1:1 IM, creating the session if needed. Does not open the IM window. Asynchronous (~10s timeout resolving the avatar's name). |
 
 ### Inventory
 | Tool | Parameters | Notes |

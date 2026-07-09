@@ -32,6 +32,7 @@
 #include "llavatarpropertiesprocessor.h"
 #include "llcallingcard.h"
 #include "lleventtimer.h"
+#include "llimview.h"
 #include "lllogchat.h"
 #include "llsdutil.h"
 #include "lluuid.h"
@@ -141,13 +142,27 @@ namespace
         if (!LLLogChat::isTranscriptExist(avatar_id))
         {
             result["messages"] = LLSD::emptyArray();
+            result["total_messages"] = 0;
+            result["offset"] = 0;
+            result["returned"] = 0;
+            result["has_more"] = false;
             result["note"] = "No saved chat history found for this avatar.";
             callback(result);
             return;
         }
 
+        // loadChatHistory() only reads the last LOG_RECALL_SIZE bytes of the
+        // transcript unless told to load everything, so an explicit offset
+        // (i.e. an agent actively paging) needs the full file loaded -
+        // otherwise offset/has_more would be relative to a truncated tail
+        // instead of the whole history.
+        LLSD load_params;
+        load_params["load_all_history"] = arguments.has("offset");
+
         std::list<LLSD> messages;
-        LLLogChat::loadChatHistory(avatarLogFileBaseName(avatar_id), messages);
+        LLLogChat::loadChatHistory(avatarLogFileBaseName(avatar_id), messages, load_params);
+
+        S32 total = (S32)messages.size();
 
         S32 max_lines = arguments.has("max_lines") ? arguments["max_lines"].asInteger() : 200;
         if (max_lines <= 0)
@@ -155,19 +170,43 @@ namespace
             max_lines = 200;
         }
 
-        S32 skip = std::max((S32)0, (S32)messages.size() - max_lines);
-        S32 idx = 0;
+        // Without an explicit offset, keep the old behavior (most recent
+        // max_lines messages). With an explicit offset, page chronologically
+        // from the oldest message forward - an agent can walk the whole
+        // history via offset=0, offset=max_lines, offset=2*max_lines, ...
+        // using has_more/total_messages to know when to stop.
+        S32 offset = arguments.has("offset")
+            ? arguments["offset"].asInteger()
+            : std::max((S32)0, total - max_lines);
+        if (offset < 0)
+        {
+            offset = 0;
+        }
+
         LLSD out_messages = LLSD::emptyArray();
+        S32 idx = 0;
+        S32 returned = 0;
         for (const LLSD& msg : messages)
         {
-            if (idx++ < skip)
+            if (idx < offset)
             {
+                ++idx;
                 continue;
             }
+            if (returned >= max_lines)
+            {
+                break;
+            }
             out_messages.append(msg);
+            ++returned;
+            ++idx;
         }
 
         result["messages"] = out_messages;
+        result["total_messages"] = total;
+        result["offset"] = offset;
+        result["returned"] = returned;
+        result["has_more"] = (offset + returned) < total;
         callback(result);
     }
 
@@ -273,6 +312,101 @@ namespace
         LLUUID avatar_id = requireAvatarId(arguments);
         new MCPAvatarProfileRequest(avatar_id, callback); // self-owning, see class comment
     }
+
+    // --- send_im (asynchronous: needs the avatar's display name first) -
+    //
+    // LLIMMgr::addSession() rejects an empty session name, so the avatar's
+    // display name must be resolved - immediately if LLAvatarNameCache
+    // already has it, otherwise via its async callback - before the P2P
+    // session can be created/found and the message delivered through
+    // LLIMModel::sendMessage(), the same call FSFloaterIM's send path uses
+    // (local echo + on-disk transcript logging included, so a follow-up
+    // get_chat_history call sees it). Deliberately does not show the IM
+    // floater, unlike the manual UI flow, so a remote-controlled send
+    // doesn't pop a window open on screen.
+    //
+    // Same self-owning/timeout-guarded shape as MCPAvatarProfileRequest
+    // above: the scheduled timeout timer is the sole owner of this
+    // object's lifetime (see complete()) - a name resolving before the
+    // timeout completes the callback immediately without freeing the
+    // object out from under the still-pending timer.
+    class MCPSendIMRequest
+    {
+    public:
+        MCPSendIMRequest(const LLUUID& avatar_id, const std::string& message, const ToolResultCallback& callback)
+            : mAvatarId(avatar_id), mMessage(message), mCallback(callback), mDone(false)
+        {
+            mConnection = LLAvatarNameCache::get(avatar_id,
+                [this](const LLUUID& id, const LLAvatarName& av_name)
+                {
+                    onNameResolved(id, av_name);
+                });
+
+            LLEventTimer::run_after(10.f, [this]()
+            {
+                if (!mDone)
+                {
+                    LLSD error_result;
+                    error_result["error"] = "Timed out resolving avatar name for IM.";
+                    complete(error_result);
+                }
+                delete this;
+            });
+        }
+
+    private:
+        void onNameResolved(const LLUUID& id, const LLAvatarName& av_name)
+        {
+            if (mDone || id != mAvatarId)
+            {
+                return;
+            }
+
+            LLUUID session_id = gIMMgr->addSession(av_name.getDisplayName(), IM_NOTHING_SPECIAL, mAvatarId);
+            if (session_id.isNull())
+            {
+                LLSD error_result;
+                error_result["error"] = "Failed to create IM session.";
+                complete(error_result);
+                return;
+            }
+
+            LLIMModel::sendMessage(mMessage, session_id, mAvatarId, IM_NOTHING_SPECIAL);
+
+            LLSD result;
+            result["status"] = "sent";
+            result["session_id"] = session_id.asString();
+            complete(result);
+        }
+
+        void complete(const LLSD& result)
+        {
+            if (mDone)
+            {
+                return;
+            }
+            mDone = true;
+            mConnection.disconnect();
+            mCallback(result);
+        }
+
+        LLUUID mAvatarId;
+        std::string mMessage;
+        ToolResultCallback mCallback;
+        bool mDone;
+        LLAvatarNameCache::callback_connection_t mConnection;
+    };
+
+    void toolSendIM(const LLSD& arguments, const ToolResultCallback& callback)
+    {
+        LLUUID avatar_id = requireAvatarId(arguments);
+        if (!arguments.has("message"))
+        {
+            throw std::runtime_error("Missing required argument 'message'.");
+        }
+
+        new MCPSendIMRequest(avatar_id, arguments["message"].asString(), callback); // self-owning, see class comment
+    }
 }
 
 void registerMCPSocialTools()
@@ -309,13 +443,18 @@ void registerMCPSocialTools()
     history_schema["type"] = "object";
     LLSD history_props;
     history_props["avatar_id"] = avatar_id_prop;
-    history_props["max_lines"] = LLSDMap("type", "integer")("description", "Max number of most-recent messages to return [default: 200].");
+    history_props["max_lines"] = LLSDMap("type", "integer")("description", "Page size [default: 200].");
+    history_props["offset"] = LLSDMap("type", "integer")("description",
+        "0-based message index to start at, oldest message first [default: last page, i.e. most recent max_lines messages]. "
+        "To page through the whole history, start at offset=0 and keep advancing by the previous call's 'returned' "
+        "count while 'has_more' is true.");
     history_schema["properties"] = history_props;
     history_schema["required"] = LLSD::emptyArray();
     history_schema["required"].append("avatar_id");
     registry.registerTool(
         "get_chat_history",
-        "Reads the locally saved 1:1 IM transcript with an avatar (most recent max_lines messages).",
+        "Reads the locally saved 1:1 IM transcript with an avatar, paginated (max_lines per page). "
+        "Response includes total_messages/offset/returned/has_more for paging through the entire history.",
         history_schema,
         toolGetChatHistory);
 
@@ -332,4 +471,20 @@ void registerMCPSocialTools()
         "Asynchronous (network round-trip to the server, up to ~15s timeout).",
         profile_schema,
         toolGetAvatarProfile);
+
+    LLSD send_im_schema;
+    send_im_schema["type"] = "object";
+    LLSD send_im_props;
+    send_im_props["avatar_id"] = avatar_id_prop;
+    send_im_props["message"] = LLSDMap("type", "string")("description", "Message text to send.");
+    send_im_schema["properties"] = send_im_props;
+    send_im_schema["required"] = LLSD::emptyArray();
+    send_im_schema["required"].append("avatar_id");
+    send_im_schema["required"].append("message");
+    registry.registerTool(
+        "send_im",
+        "Sends a 1:1 instant message to an avatar, creating the IM session if needed. Does not open the IM "
+        "window. Asynchronous (resolves the avatar's display name first, up to ~10s timeout).",
+        send_im_schema,
+        toolSendIM);
 }

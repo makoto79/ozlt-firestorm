@@ -432,8 +432,7 @@ LLPipeline::LLPipeline() :
     mResetVertexBuffers(false),
     mLastRebuildPool(NULL),
     mLightMask(0),
-    mLightMovingMask(0),
-    mColorGradingEnabled(false)
+    mLightMovingMask(0)
 {
     mNoiseMap = 0;
     mTrueNoiseMap = 0;

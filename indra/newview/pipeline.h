@@ -825,7 +825,6 @@ public:
     // color grading 3D LUT
     U32                         mColorGradingLUT = 0;
     std::string                 mCurrentLUTName;
-    bool                        mColorGradingEnabled;
 
     //texture for making the glow
     LLRenderTarget              mGlow[3];

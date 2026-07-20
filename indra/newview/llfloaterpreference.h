@@ -612,6 +612,11 @@ protected:
     void onClickClearDebugSearchURL();
     void onClickPickDebugSearchURL();
 
+    void onBrowseLUT();
+    void onLUTFileSelected(const std::vector<std::string>& filenames);
+    void onLUTComboChanged(LLUICtrl* ctrl, const LLSD& value);
+    void onRemoveLUT();
+
     void refreshGridList(bool success = true);
     LLScrollListCtrl* mGridListControl;
 

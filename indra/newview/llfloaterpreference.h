@@ -275,6 +275,12 @@ public:
     void onClickRenderExceptions();
     void onClickAutoAdjustments();
     void onClickAdvanced();
+
+    void onBrowseLUT();
+    void onLUTFileSelected(const std::vector<std::string>& filenames);
+    void onLUTComboChanged(LLUICtrl* ctrl, const LLSD& value);
+    void onRemoveLUT();
+
     void applyUIColor(LLUICtrl* ctrl, const LLSD& param);
     void getUIColor(LLUICtrl* ctrl, const LLSD& param);
     void onLogChatHistorySaved();
@@ -611,11 +617,6 @@ protected:
     bool removeGridCB(const LLSD& notification, const LLSD& response);
     void onClickClearDebugSearchURL();
     void onClickPickDebugSearchURL();
-
-    void onBrowseLUT();
-    void onLUTFileSelected(const std::vector<std::string>& filenames);
-    void onLUTComboChanged(LLUICtrl* ctrl, const LLSD& value);
-    void onRemoveLUT();
 
     void refreshGridList(bool success = true);
     LLScrollListCtrl* mGridListControl;

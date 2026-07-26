@@ -117,11 +117,14 @@ void main()
 #if FRONT_BLUR
 		if (sc > 0.5)
 		{
+			// GPU-TDR safety: cap the scatter circle so a high max_cof can't spin
+			// the sample loops long enough to trip a driver timeout/reset.
+			sc = min(sc, 64.0);
 			// Apple Silicon Metal safety: bound the loop in case sc becomes NaN
 			// (NaN > 0.5 is always false on conformant GL but undefined under Metal emulation).
 			for (int safety = 0; safety < 32 && sc > 0.5; ++safety)
 			{
-				int its = int(max(1.0,(sc*3.7)));
+				int its = int(max(1.0, min(sc*3.7, 128.0)));
 				for (int i=0; i<its; ++i)
 				{
 					float ang = sc+i*2*PI/its; // sc is added for rotary perturbance
@@ -139,10 +142,12 @@ void main()
 #endif
 		{
 			sc = abs(sc);
+			// GPU-TDR safety: cap the scatter circle (see comment above).
+			sc = min(sc, 64.0);
 			// Apple Silicon Metal safety: bounded loop (see comment above).
 			for (int safety = 0; safety < 32 && sc > 0.5; ++safety)
 			{
-				int its = int(max(1.0,(sc*3.7)));
+				int its = int(max(1.0, min(sc*3.7, 128.0)));
 				for (int i=0; i<its; ++i)
 				{
 					float ang = sc+i*2*PI/its; // sc is added for rotary perturbance

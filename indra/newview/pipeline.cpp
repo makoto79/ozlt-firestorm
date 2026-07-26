@@ -1481,6 +1481,15 @@ bool LLPipeline::loadColorGradingLUT(const std::string& filename)
     gGL.getTexUnit(0)->bindManual(LLTexUnit::TT_TEXTURE_3D, mColorGradingLUT);
     glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB16F,
         lut_size, lut_size, lut_size, 0, GL_RGB, GL_FLOAT, lut_data.data());
+    GLenum lut_err = glGetError();
+    if (lut_err != GL_NO_ERROR)
+    {
+        LL_WARNS("LUT") << "OpenGL error after glTexImage3D (size=" << lut_size
+            << "): 0x" << std::hex << lut_err << std::dec << " - discarding LUT" << LL_ENDL;
+        gGL.getTexUnit(0)->unbind(LLTexUnit::TT_TEXTURE_3D);
+        releaseColorGradingLUT();
+        return false;
+    }
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);

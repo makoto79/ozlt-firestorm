@@ -6136,6 +6136,12 @@ Setzen Sie den Editorpfad in Anführungszeichen
 	<string name="Command_FaceNearest_Label">
 		Zu nächstem Avatar drehen
 	</string>
+	<string name="Command_CameraTimeline_Label">
+		Kamera-Zeitachse
+	</string>
+	<string name="Command_CameraTimeline_Tooltip">
+		Kamera-Position, Drehung und Brennweite aufnehmen und auf einer Zeitachse abspielen
+	</string>
 	<string name="Command_Appearance_Tooltip">
 		Avatar ändern
 	</string>

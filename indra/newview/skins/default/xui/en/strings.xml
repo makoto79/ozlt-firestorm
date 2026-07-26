@@ -2799,6 +2799,8 @@ name="Command_360_Capture_Label">360° Snapshot</string>
   <string name="Command_Omnifilter_Label">Omnifilter</string>
   <string name="Command_AvatarAlign_Label">Avatar alignment</string>
   <string name="Command_FaceNearest_Label">Face nearest avatar</string>
+  <string name="Command_CameraTimeline_Label">Camera Timeline</string>
+  <string name="Command_CameraTimeline_Tooltip">Record and play back camera position/rotation timeline</string>
 
   <string name="Command_360_Capture_Tooltip">Capture a 360° equirectangular image</string>
   <string name="Command_AboutLand_Tooltip">Information about the land you're visiting</string>

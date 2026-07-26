@@ -411,6 +411,7 @@ set(viewer_SOURCE_FILES
     fsfloaterperformance.cpp # <FS:Beq> restore fs perf floater
     llfloaterperms.cpp
     llfloaterphotogrammetry.cpp
+    llfloatercameratimeline.cpp
     llfloaterprofile.cpp
     llfloaterpreference.cpp
     # llfloaterpreferencesgraphicsadvanced.cpp
@@ -1286,6 +1287,7 @@ set(viewer_HEADER_FILES
     fsfloaterperformance.h
     llfloaterperms.h
     llfloaterphotogrammetry.h
+    llfloatercameratimeline.h
     llfloaterprofile.h
     llfloaterpreference.h
     # llfloaterpreferencesgraphicsadvanced.h

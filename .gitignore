@@ -133,5 +133,7 @@ checks.json
 build_viewer.log
 build_viewer.exitcode
 build_viewer.cmd
+full_rebuild.log
+full_rebuild.exitcode
 
 FEATURE*.md

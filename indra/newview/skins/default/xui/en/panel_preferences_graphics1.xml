@@ -1843,7 +1843,20 @@ If you do not understand the distinction then leave this control alone."
          name="CameraFNum"
          tool_tip="Camera f-number value for DoF effect"
          top_pad="10"
-         width="471"/>
+         width="449"/>
+        <button
+         enabled_control="RenderDepthOfField"
+         follows="left|top"
+         height="16"
+         image_overlay="Refresh_Off"
+         layout="topleft"
+         left_pad="2"
+         name="ResetCameraFNum"
+         top_delta="0"
+         tool_tip="Reset to default"
+         width="16">
+         <button.commit_callback function="Pref.ResetSetting" parameter="CameraFNumber"/>
+        </button>
         <slider
          enabled_control="RenderDepthOfField"
          control_name="CameraFocalLength"
@@ -1861,7 +1874,20 @@ If you do not understand the distinction then leave this control alone."
          name="CameraFocal"
          tool_tip="Camera focal length for DoF effect (in millimeters)"
          top_pad="5"
-         width="475"/>
+         width="449"/>
+        <button
+         enabled_control="RenderDepthOfField"
+         follows="left|top"
+         height="16"
+         image_overlay="Refresh_Off"
+         layout="topleft"
+         left_pad="2"
+         name="ResetCameraFocal"
+         top_delta="0"
+         tool_tip="Reset to default"
+         width="16">
+         <button.commit_callback function="Pref.ResetSetting" parameter="CameraFocalLength"/>
+        </button>
         <slider
          enabled_control="RenderDepthOfField"
          control_name="CameraFieldOfView"
@@ -1879,7 +1905,20 @@ If you do not understand the distinction then leave this control alone."
          name="Camera FOV"
          tool_tip="Vertical camera field of view for DoF effect (in degrees)"
          top_pad="5"
-         width="468"/>
+         width="449"/>
+        <button
+         enabled_control="RenderDepthOfField"
+         follows="left|top"
+         height="16"
+         image_overlay="Refresh_Off"
+         layout="topleft"
+         left_pad="2"
+         name="ResetCameraFOV"
+         top_delta="0"
+         tool_tip="Reset to default"
+         width="16">
+         <button.commit_callback function="Pref.ResetSetting" parameter="CameraFieldOfView"/>
+        </button>
         <slider
          enabled_control="RenderDepthOfField"
          control_name="CameraFocusTransitionTime"
@@ -1897,7 +1936,20 @@ If you do not understand the distinction then leave this control alone."
          name="CameraFocusTrans"
          tool_tip="Time taken to alter focus from one place to the next"
          top_pad="5"
-         width="478"/>
+         width="449"/>
+        <button
+         enabled_control="RenderDepthOfField"
+         follows="left|top"
+         height="16"
+         image_overlay="Refresh_Off"
+         layout="topleft"
+         left_pad="2"
+         name="ResetCameraFocusTrans"
+         top_delta="0"
+         tool_tip="Reset to default"
+         width="16">
+         <button.commit_callback function="Pref.ResetSetting" parameter="CameraFocusTransitionTime"/>
+        </button>
        <slider
          enabled_control="RenderDepthOfField"
          control_name="CameraDoFResScale"
@@ -1915,7 +1967,20 @@ If you do not understand the distinction then leave this control alone."
          name="CameraDoFResScale"
          tool_tip="Affects the quality of the blurring and the performance of rendering.  (higher = better quality, lower = better perforamce)"
          top_pad="5"
-         width="477"/>
+         width="449"/>
+        <button
+         enabled_control="RenderDepthOfField"
+         follows="left|top"
+         height="16"
+         image_overlay="Refresh_Off"
+         layout="topleft"
+         left_pad="2"
+         name="ResetCameraDoFResScale"
+         top_delta="0"
+         tool_tip="Reset to default"
+         width="16">
+         <button.commit_callback function="Pref.ResetSetting" parameter="CameraDoFResScale"/>
+        </button>
      </panel>
 
 <!-- Color Grading LUT -->

@@ -227,6 +227,8 @@ F32 LLPipeline::RenderShadowFOVCutoff;
 bool LLPipeline::CameraOffset;
 F32 LLPipeline::CameraMaxCoF;
 F32 LLPipeline::CameraDoFResScale;
+F32 LLPipeline::RenderDepthOfFieldChromaStrength;
+F32 LLPipeline::RenderDepthOfFieldChromaDeadzone;
 LLVector3 LLPipeline::RenderVignette;
 F32 LLPipeline::RenderAutoHideSurfaceAreaLimit;
 bool LLPipeline::RenderScreenSpaceReflections;
@@ -653,6 +655,8 @@ void LLPipeline::init()
     connectRefreshCachedSettingsSafe("CameraOffset");
     connectRefreshCachedSettingsSafe("CameraMaxCoF");
     connectRefreshCachedSettingsSafe("CameraDoFResScale");
+    connectRefreshCachedSettingsSafe("RenderDepthOfFieldChromaStrength");
+    connectRefreshCachedSettingsSafe("RenderDepthOfFieldChromaDeadzone");
     connectRefreshCachedSettingsSafe("RenderAutoHideSurfaceAreaLimit");
     connectRefreshCachedSettingsSafe("RenderScreenSpaceReflections");
     connectRefreshCachedSettingsSafe("RenderScreenSpaceReflectionIterations");
@@ -1293,6 +1297,8 @@ void LLPipeline::refreshCachedSettings()
     CameraOffset = gSavedSettings.getBOOL("CameraOffset");
     CameraMaxCoF = gSavedSettings.getF32("CameraMaxCoF");
     CameraDoFResScale = gSavedSettings.getF32("CameraDoFResScale");
+    RenderDepthOfFieldChromaStrength = gSavedSettings.getF32("RenderDepthOfFieldChromaStrength");
+    RenderDepthOfFieldChromaDeadzone = gSavedSettings.getF32("RenderDepthOfFieldChromaDeadzone");
     RenderVignette = gSavedSettings.getVector3("FSRenderVignette"); // <FS:Beq/> redo the vignette
 
     RenderAutoHideSurfaceAreaLimit = gSavedSettings.getF32("RenderAutoHideSurfaceAreaLimit");
@@ -9007,7 +9013,8 @@ void LLPipeline::renderDoF(LLRenderTarget* src, LLRenderTarget* dst)
                 gDeferredPostProgram.uniform1f(LLShaderMgr::DOF_MAX_COF, adj_COF);
                 // </FS:Beq>
                 gDeferredPostProgram.uniform1f(LLShaderMgr::DOF_RES_SCALE, CameraDoFResScale);
-                gDeferredPostProgram.uniform1f(LLShaderMgr::DOF_CHROMA_STRENGTH, 1.0f);
+                gDeferredPostProgram.uniform1f(LLShaderMgr::DOF_CHROMA_STRENGTH, RenderDepthOfFieldChromaStrength);
+                gDeferredPostProgram.uniform1f(LLShaderMgr::DOF_CHROMA_DEADZONE, RenderDepthOfFieldChromaDeadzone);
 
                 mScreenTriangleVB->setBuffer();
                 mScreenTriangleVB->drawArrays(LLRender::TRIANGLES, 0, 3);

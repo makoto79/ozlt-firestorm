@@ -1412,6 +1412,7 @@ void LLShaderMgr::initAttribsAndUniforms()
     mReservedUniforms.push_back("dof_width");
     mReservedUniforms.push_back("dof_height");
     mReservedUniforms.push_back("chroma_str");
+    mReservedUniforms.push_back("chroma_deadzone");
     mReservedUniforms.push_back("color_grading_lut");
     mReservedUniforms.push_back("color_grading_lut_intensity");
     mReservedUniforms.push_back("color_grading_lut_enabled");

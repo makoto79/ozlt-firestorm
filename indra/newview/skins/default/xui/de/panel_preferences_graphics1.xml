@@ -277,6 +277,8 @@
 		<slider label="Kamera-Bildseitenverhältnis:" name="CameraAspectRatio" tool_tip="Kamera-Bildseitenverhältnis für die Schärfentiefe" label_width="195" width="409"/>
 		<slider label="Fokus-Übergangszeit:" name="CameraFocusTrans" tool_tip="Zeit, die benötigt wird, um den Focus neu einzustellen" label_width="195" width="409"/>
 		<slider label="Schärfentiefe-Darstellungsqualität:" name="CameraDoFResScale" tool_tip="Beeinflusst die Qualität der Unschärfe und Geschwindigkeit der Darstellung (höher = bessere Qualität, niedriger = höhere Geschwindigkeit" label_width="195" width="409"/>
+		<slider label="Chromatische Aberration – Stärke:" name="ChromaStrength" tool_tip="Gesamtintensität der chromatischen Aberration der Schärfentiefe. 0 = aus, 1 = Standard." label_width="195" width="409"/>
+		<slider label="Chroma – Fokus-Totzone:" name="ChromaDeadzone" tool_tip="Wie weit ein Pixel außerhalb des Fokus sein muss, bevor chromatische Aberration einsetzt. Höher hält fast-scharfe Bereiche frei von Farbfransen." label_width="195" width="409"/>
 	</panel>
 
 	<panel label="Farbkorrektur (LUT)" name="ColorGradingLUT panel">

@@ -1166,6 +1166,8 @@ public:
     static bool CameraOffset;
     static F32 CameraMaxCoF;
     static F32 CameraDoFResScale;
+    static F32 RenderDepthOfFieldChromaStrength; // DoF chromatic aberration intensity
+    static F32 RenderDepthOfFieldChromaDeadzone;  // CoF below which chroma is suppressed
     static LLVector3 RenderVignette; // <FS:Beq/> refresh of vignette support
     static F32 RenderAutoHideSurfaceAreaLimit;
     static bool RenderScreenSpaceReflections;

@@ -210,6 +210,7 @@ public:
         DOF_HEIGHT,                         //  "dof_height"
 
         DOF_CHROMA_STRENGTH,                //  "chroma_str"
+        DOF_CHROMA_DEADZONE,                //  "chroma_deadzone"
 
         COLOR_GRADING_LUT,                  //  "color_grading_lut"
         COLOR_GRADING_LUT_INTENSITY,        //  "color_grading_lut_intensity"

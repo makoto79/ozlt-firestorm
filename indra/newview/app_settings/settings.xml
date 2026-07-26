@@ -11931,6 +11931,30 @@ Change of this parameter will affect the layout of buttons in notification toast
     <integer>0</integer>
   </map>
 
+  <key>RenderDepthOfFieldChromaStrength</key>
+  <map>
+    <key>Comment</key>
+    <string>Overall intensity of DoF-coupled chromatic aberration (0 = off, 1 = default). Only used when RenderDepthOfFieldChroma is enabled.</string>
+    <key>Persist</key>
+    <integer>1</integer>
+    <key>Type</key>
+    <string>F32</string>
+    <key>Value</key>
+    <real>1.0</real>
+  </map>
+
+  <key>RenderDepthOfFieldChromaDeadzone</key>
+  <map>
+    <key>Comment</key>
+    <string>Circle-of-confusion below which DoF chromatic aberration is suppressed, so near-focus content stays free of colour fringing. Higher = cleaner in-focus areas. Only used when RenderDepthOfFieldChroma is enabled.</string>
+    <key>Persist</key>
+    <integer>1</integer>
+    <key>Type</key>
+    <string>F32</string>
+    <key>Value</key>
+    <real>2.0</real>
+  </map>
+
   <key>FSFocusPointLocked</key>
   <map>
     <key>Comment</key>

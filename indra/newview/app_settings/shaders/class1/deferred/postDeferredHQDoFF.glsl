@@ -52,6 +52,7 @@ uniform float max_cof;
 uniform float res_scale;
 
 uniform float chroma_str;
+uniform float chroma_deadzone;
 
 in vec2 vary_fragcoord;
 
@@ -61,7 +62,10 @@ void dofSample(inout vec4 diff, inout float w, float min_sc, vec2 tc, float dept
 	float sc = abs(s.a*2.0-1.0)*(max_cof*4);
 #if HAS_DOF_CHROMA
 	vec3 col_offset = vec3(0.0015, 0.0000, 0.0005);
-	float mult = sc * (chroma_str * 0.2);
+	// Focus dead-zone: no colour fringing until a sample is clearly out of
+	// focus, so near-focus content stays clean. Both the dead-zone and the
+	// overall strength are user-controllable (RenderDepthOfFieldChroma*).
+	float mult = max(sc - chroma_deadzone, 0.0) * (chroma_str * 0.2);
 	col_offset *= vec3(mult);
 
     s.r = texture(diffuseRect, tc + vec2(col_offset.x)).r;

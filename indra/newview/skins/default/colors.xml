@@ -1161,6 +1161,9 @@
      name="ChatTimestampColor"
      reference="White" />
     <color
+     name="URLWarningColor"
+     reference="Red" />
+    <color
       name="MenuBarStreamingBgColor"
       reference="DkGray" />
     <color

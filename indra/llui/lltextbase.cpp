@@ -2743,6 +2743,17 @@ void LLTextBase::appendTextImpl(const std::string& new_text, const LLStyle::Para
             }
             // </FS:Ansariel> Optional icon position
 
+            // URL security warning
+            if (match.getSecurityStatus() != SECURITY_NONE && !match.getSecurityMessage().empty())
+            {
+                LLStyle::Params warning_params(style_params);
+                static LLUIColor warning_color = LLUIColorTable::getInstance()->getColor("URLWarningColor", LLColor4::red);
+                warning_params.color = warning_color;
+                warning_params.readonly_color = warning_color;
+                warning_params.font.style = "BOLD";
+                appendAndHighlightTextImpl("\n" + match.getSecurityMessage(), (S32)LLTextParser::END, warning_params, LLStyle::UNDERLINE_NEVER);
+            }
+
             // move on to the rest of the text after the Url
             if (end < (S32)text.length())
             {

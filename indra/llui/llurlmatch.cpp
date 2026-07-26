@@ -70,6 +70,8 @@ void LLUrlMatch::setValues(U32 start, U32 end, const std::string &url, const std
     mUnderline = underline;
     mTrusted = trusted;
     mSkipProfileIcon = skip_icon;
+    mSecurityStatus = SECURITY_NONE;
+    mSecurityMessage.clear();
     // <FS:Ansariel> Store matched text
     mMatchedText = matched_text;
     // <FS:PP> Preview real URLs of bracket links

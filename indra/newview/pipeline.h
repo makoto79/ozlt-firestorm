@@ -825,6 +825,8 @@ public:
     // color grading 3D LUT
     U32                         mColorGradingLUT = 0;
     std::string                 mCurrentLUTName;
+    S32                         mColorGradingLUTSize = 0;
+    bool                        mColorGradingLUTIsLog = false; // LUT expects Cineon log input (per .cube header)
 
     //texture for making the glow
     LLRenderTarget              mGlow[3];

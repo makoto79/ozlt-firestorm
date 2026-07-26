@@ -1415,6 +1415,8 @@ void LLShaderMgr::initAttribsAndUniforms()
     mReservedUniforms.push_back("color_grading_lut");
     mReservedUniforms.push_back("color_grading_lut_intensity");
     mReservedUniforms.push_back("color_grading_lut_enabled");
+    mReservedUniforms.push_back("color_grading_lut_size");
+    mReservedUniforms.push_back("color_grading_lut_is_log");
 
     mReservedUniforms.push_back("depthMap");
     mReservedUniforms.push_back("shadowMap0");

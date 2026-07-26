@@ -214,6 +214,8 @@ public:
         COLOR_GRADING_LUT,                  //  "color_grading_lut"
         COLOR_GRADING_LUT_INTENSITY,        //  "color_grading_lut_intensity"
         COLOR_GRADING_LUT_ENABLED,          //  "color_grading_lut_enabled"
+        COLOR_GRADING_LUT_SIZE,             //  "color_grading_lut_size"
+        COLOR_GRADING_LUT_IS_LOG,           //  "color_grading_lut_is_log"
 
         DEFERRED_DEPTH,                     //  "depthMap"
         DEFERRED_SHADOW0,                   //  "shadowMap0"

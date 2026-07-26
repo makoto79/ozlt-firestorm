@@ -1409,6 +1409,8 @@ void LLPipeline::releaseColorGradingLUT()
         mColorGradingLUT = 0;
     }
     mCurrentLUTName.clear();
+    mColorGradingLUTSize = 0;
+    mColorGradingLUTIsLog = false;
 }
 
 void LLPipeline::createColorGradingLUTBuffers()
@@ -1435,12 +1437,21 @@ bool LLPipeline::loadColorGradingLUT(const std::string& filename)
     }
 
     int lut_size = 0;
+    bool is_log = false;
     std::vector<float> lut_data;
     std::string line;
 
     while (std::getline(file, line))
     {
-        if (line.empty() || line[0] == '#') continue;
+        if (line.empty()) continue;
+        if (line[0] == '#')
+        {
+            // Print film emulation LUTs declare their input domain in header
+            // comments, e.g. "# Input: Cineon Log"
+            if (utf8str_tolower(line).find("cineon") != std::string::npos)
+                is_log = true;
+            continue;
+        }
         if (line.substr(0, 12) == "LUT_3D_SIZE ")
         {
             lut_size = std::stoi(line.substr(12));
@@ -1478,7 +1489,10 @@ bool LLPipeline::loadColorGradingLUT(const std::string& filename)
     gGL.getTexUnit(0)->unbind(LLTexUnit::TT_TEXTURE_3D);
 
     mCurrentLUTName = filename;
-    LL_INFOS("LUT") << "Loaded color grading LUT: " << path << LL_ENDL;
+    mColorGradingLUTSize = lut_size;
+    mColorGradingLUTIsLog = is_log;
+    LL_INFOS("LUT") << "Loaded color grading LUT: " << path
+        << " (size=" << lut_size << (is_log ? ", cineon log input" : ", sRGB input") << ")" << LL_ENDL;
     return true;
 }
 
@@ -8019,6 +8033,8 @@ void LLPipeline::tonemap(LLRenderTarget* src, LLRenderTarget* dst, bool gamma_co
         shader->uniform1i(LLShaderMgr::COLOR_GRADING_LUT_ENABLED, (mColorGradingLUT != 0) ? 1 : 0);
         shader->uniform1f(LLShaderMgr::COLOR_GRADING_LUT_INTENSITY,
             gSavedSettings.getF32("RenderColorGradingLUTIntensity"));
+        shader->uniform1f(LLShaderMgr::COLOR_GRADING_LUT_SIZE, (F32)llmax(mColorGradingLUTSize, 2));
+        shader->uniform1i(LLShaderMgr::COLOR_GRADING_LUT_IS_LOG, mColorGradingLUTIsLog ? 1 : 0);
 
         mScreenTriangleVB->setBuffer();
         mScreenTriangleVB->drawArrays(LLRender::TRIANGLES, 0, 3);

@@ -39,6 +39,7 @@
 #include "llfloateraddpaymentmethod.h"
 #include "llfloaterauction.h"
 #include "llfloaterautoreplacesettings.h"
+#include "llfloateravatarlora.h"
 #include "llfloateravatarpicker.h"
 #include "llfloateravatarwelcomepack.h"
 //#include "llfloateravatarrendersettings.h" // <FS:Ansariel> [FS Persisted Avatar Render Settings]
@@ -405,6 +406,7 @@ void LLViewerFloaterReg::registerFloaters()
     LLFloaterReg::add("appearance", "floater_my_appearance.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterSidePanelContainer>);
     LLFloaterReg::add("associate_listing", "floater_associate_listing.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterAssociateListing>);
     LLFloaterReg::add("auction", "floater_auction.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterAuction>);
+    LLFloaterReg::add("avatar_lora", "floater_avatar_lora.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterAvatarLora>);
     LLFloaterReg::add("avatar_picker", "floater_avatar_picker.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterAvatarPicker>);
     LLFloaterReg::add("avatar_welcome_pack", "floater_avatar_welcome_pack.xml", (LLFloaterBuildFunc)&LLFloaterReg::build<LLFloaterAvatarWelcomePack>);
     // <FS:Ansariel> [FS Persisted Avatar Render Settings]

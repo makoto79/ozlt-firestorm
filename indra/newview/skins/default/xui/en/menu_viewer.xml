@@ -606,6 +606,13 @@
              function="Floater.Show"
              parameter="photogrammetry" />
         </menu_item_call>
+        <menu_item_call
+         label="Avatar LoRA Capture"
+         name="AvatarLoraCapture">
+            <menu_item_call.on_click
+             function="Floater.Show"
+             parameter="avatar_lora" />
+        </menu_item_call>
 
       <menu_item_call
         label="Money Tracker"

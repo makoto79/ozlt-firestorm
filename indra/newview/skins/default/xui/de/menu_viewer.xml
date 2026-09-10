@@ -72,6 +72,7 @@
 		</menu>
 		<menu_item_call label="Foto machen" name="Take Snapshot"/>
 		<menu_item_call label="360° Foto" name="Capture 360"/>
+		<menu_item_call label="Avatar-LoRA-Aufnahme" name="AvatarLoraCapture"/>
 		<menu_item_call label="Money-Tracker" name="money_tracker"/>
 		<menu_item_call label="Pose-Stand..." name="pose_stand"/>
 		<menu_item_check label="Poser" name="Poser"/>

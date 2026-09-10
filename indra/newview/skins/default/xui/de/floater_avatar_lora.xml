@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<floater name="avatar_lora" title="Avatar-LoRA-Aufnahme">
+	<string name="self_suffix">(du)</string>
+	<string name="info_no_avatar">Kein Avatar ausgewählt</string>
+	<string name="info_avatar">Größe [HEIGHT] m &#183; Skelett: [SKELETON]</string>
+	<string name="skeleton_ok">vollständig</string>
+	<string name="skeleton_missing">unvollständig (lädt noch?)</string>
+	<string name="total_images">[COUNT] Bilder</string>
+	<string name="status_ready">Bereit. Vor dem Start mit der Vorschau das Framing prüfen.</string>
+	<string name="status_countdown">Start in [SECONDS] ...</string>
+	<string name="status_capturing">Bild [INDEX]/[TOTAL] &#183; [SHOT]</string>
+	<string name="status_done">Fertig &#8211; [COUNT] Bilder geschrieben nach [DIR]</string>
+	<string name="status_aborted">Aufnahme abgebrochen.</string>
+	<string name="status_dir_failed">Ausgabeordner konnte nicht angelegt werden.</string>
+	<string name="status_preview">Framing-Vorschau &#8211; die Kamera folgt diesem Fenster.</string>
+	<string name="status_measure_failed">Avatar konnte nicht vermessen werden. Ist er vollständig geladen?</string>
+	<string name="preview_info">[INDEX]/[TOTAL] &#183; [SHOT] &#183; Az [AZ]&#176; El [EL]&#176; &#183; [DIST] m</string>
+	<string name="group_fullbody">Ganzkörper</string>
+	<string name="group_upperbody">Oberkörper</string>
+	<string name="group_midbody">Körpermitte</string>
+	<string name="group_legs">Beine</string>
+	<string name="group_head">Kopf</string>
+	<string name="group_hands">Hände</string>
+	<string name="group_feet">Füße</string>
+	<string name="side_left">links</string>
+	<string name="side_right">rechts</string>
+
+	<text name="target_label">
+		Ziel-Avatar
+	</text>
+	<scroll_list name="avatar_list" tool_tip="Avatar, der aufgenommen wird. Der eigene Avatar steht an erster Stelle.">
+		<scroll_list.columns label="Avatare in der Nähe" name="name"/>
+	</scroll_list>
+	<button label="Aktualisieren" name="refresh_avatars_btn"/>
+
+	<text name="shots_label">
+		Aufnahmesatz
+	</text>
+	<text name="directions_label">
+		Richtungen
+	</text>
+	<check_box label="Ganzkörper" name="shot_fullbody" tool_tip="Orbit um den ganzen Körper, auf jeder Höhenebene."/>
+	<check_box label="Oberkörper" name="shot_upperbody"/>
+	<check_box label="Körpermitte" name="shot_midbody"/>
+	<check_box label="Beine" name="shot_legs"/>
+	<check_box label="Kopf" name="shot_head"/>
+	<check_box label="Hände / Arme (je Seite)" name="shot_hands"/>
+	<check_box label="Füße / Beine (je Seite)" name="shot_feet"/>
+	<spinner label="Höhenebenen Ganzkörper" label_width="170" name="fullbody_levels" tool_tip="Anzahl der Kamerahöhen für den Ganzkörper-Orbit (auf Augenhöhe, von oben, von unten)."/>
+
+	<text name="camera_label">
+		Kamera
+	</text>
+	<spinner label="FOV Körper (Grad)" label_width="150" name="fov_body" tool_tip="Bildwinkel für Körperaufnahmen. Weiter bedeutet mehr perspektivische Verzerrung."/>
+	<spinner label="FOV Detail (Grad)" label_width="150" name="fov_detail" tool_tip="Bildwinkel für Kopf-, Hand- und Fußnahaufnahmen. Eine Porträt-Brennweite verzerrt Gesichter nicht."/>
+	<spinner label="Rand (%)" label_width="150" name="framing_margin"/>
+	<spinner label="Elevation oben (Grad)" label_width="150" name="elevation_high"/>
+	<spinner label="Elevation unten (Grad)" label_width="150" name="elevation_low"/>
+
+	<text name="output_label">
+		Ausgabe
+	</text>
+	<combo_box label="Auflösung" name="resolution_combo"/>
+	<line_editor name="output_dir" tool_tip="Ordner, in den der Datensatz geschrieben wird."/>
+	<button label="Wählen" name="browse_btn"/>
+	<combo_box label="Ordnerstruktur" name="folder_structure">
+		<combo_item name="flat">Flach</combo_item>
+		<combo_item name="kohya">Kohya (img/&lt;Wiederholungen&gt;_&lt;Trigger&gt;)</combo_item>
+	</combo_box>
+	<spinner label="Wiederholungen" label_width="100" name="kohya_repeats" tool_tip="Wiederholungszahl im Kohya-Ordnernamen."/>
+	<text name="trigger_label">
+		Trigger-Wort
+	</text>
+	<line_editor name="trigger_word" tool_tip="Eindeutiges Token, auf das die LoRA trainiert wird, z. B. ohwx_avatar."/>
+	<text name="class_label">
+		Klassen-Token
+	</text>
+	<line_editor name="class_token" tool_tip="Klasse des Motivs, z. B. woman, man, person."/>
+	<text name="tags_label">
+		Zusatz-Tags
+	</text>
+	<line_editor name="extra_tags" tool_tip="Wird an jede Caption angehängt, z. B. Outfit- oder Haarbeschreibung."/>
+	<check_box label="Caption-Dateien schreiben" name="write_captions"/>
+
+	<text name="run_label">
+		Aufnahme
+	</text>
+	<button label="&lt; Vorschau" name="preview_prev_btn" tool_tip="Kamera auf die vorherige Aufnahme stellen, ohne auszulösen."/>
+	<button label="Vorschau &gt;" name="preview_next_btn" tool_tip="Kamera auf die nächste Aufnahme stellen, ohne auszulösen."/>
+	<button label="Aufnahme starten" name="start_btn"/>
+	<button label="Stopp" name="stop_btn"/>
+	<spinner label="Startverzögerung (s)" label_width="120" name="capture_delay" tool_tip="Countdown vor dem ersten Bild, damit du die Kamera loslassen kannst."/>
+</floater>

@@ -20,6 +20,7 @@
 	<string name="group_midbody">Körpermitte</string>
 	<string name="group_legs">Beine</string>
 	<string name="group_head">Kopf</string>
+	<string name="group_face">Gesicht</string>
 	<string name="group_hands">Hände</string>
 	<string name="group_feet">Füße</string>
 	<string name="side_left">links</string>
@@ -79,15 +80,17 @@
 	<text name="tags_label">
 		Zusatz-Tags
 	</text>
-	<line_editor name="extra_tags" tool_tip="Wird an jede Caption angehängt, z. B. Outfit- oder Haarbeschreibung."/>
+	<line_editor name="extra_tags" tool_tip="Wird an jede Caption angehängt, z. B. Outfit- oder Haarbeschreibung. Mehrere Tags mit Komma trennen."/>
 	<check_box label="Caption-Dateien schreiben" name="write_captions"/>
+	<check_box label="Erstes Tag im Dateinamen" name="tags_in_filename" tool_tip="Setzt das erste Zusatz-Tag in jeden Dateinamen, damit eine zweite Serie – anderes Outfit, offener statt geschlossener Mund – die erste nicht überschreibt."/>
 
 	<text name="run_label">
 		Aufnahme
 	</text>
 	<button label="&lt; Vorschau" name="preview_prev_btn" tool_tip="Kamera auf die vorherige Aufnahme stellen, ohne auszulösen."/>
 	<button label="Vorschau &gt;" name="preview_next_btn" tool_tip="Kamera auf die nächste Aufnahme stellen, ohne auszulösen."/>
-	<button label="Aufnahme starten" name="start_btn"/>
+	<button label="Körper aufnehmen" name="start_btn" tool_tip="Nimmt den links konfigurierten Aufnahmesatz auf."/>
+	<button label="Gesicht aufnehmen" name="start_face_btn" tool_tip="Eigene Nahaufnahmeserie des Gesichts: 9 Richtungen vom rechten bis zum linken Profil inklusive exakt frontal, auf drei Höhen (27 Bilder). Unabhängig vom Aufnahmesatz."/>
 	<button label="Stopp" name="stop_btn"/>
 	<spinner label="Startverzögerung (s)" label_width="120" name="capture_delay" tool_tip="Countdown vor dem ersten Bild, damit du die Kamera loslassen kannst."/>
 </floater>

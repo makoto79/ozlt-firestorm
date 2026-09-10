@@ -61,16 +61,24 @@
 static const F32 LORA_NEARBY_RANGE = 50.f;
 
 // Framing heights, as a fraction of the measured body height.
-static const F32 FRAME_FULLBODY = 1.15f;
+static const F32 FRAME_FULLBODY = 1.22f;
 static const F32 FRAME_UPPERBODY = 0.50f;
 static const F32 FRAME_MIDBODY = 0.40f;
 static const F32 FRAME_LEGS = 0.55f;
 
 // Close-up framing heights in meters, for an avatar of REFERENCE_HEIGHT.
 static const F32 REFERENCE_HEIGHT = 1.8f;
-static const F32 FRAME_HEAD = 0.35f;
+static const F32 FRAME_HEAD = 0.48f;
+static const F32 FRAME_FACE = 0.28f;
 static const F32 FRAME_HANDS = 0.30f;
-static const F32 FRAME_FEET = 0.32f;
+static const F32 FRAME_FEET = 0.40f;
+
+// The face series: one row per height, sweeping from the avatar's right
+// profile to its left profile with both ends included. An odd number of steps
+// puts one shot exactly frontal.
+static const S32 FACE_AZIMUTH_STEPS = 9;
+static const F32 FACE_AZIMUTH_LIMIT = 90.f;
+static const F32 FACE_CENTER_BELOW_EYES = 0.02f;
 
 // A subject is never wider than this fraction of the height we frame it at.
 // Used so portrait output does not crop the sides.
@@ -85,6 +93,13 @@ static const F32 FEET_ELEVATION = 20.f;
 static const F32 ANKLE_TO_SOLE = 0.04f;
 static const F32 HEAD_TO_CROWN = 0.13f;
 static const F32 EYE_ABOVE_HEAD_JOINT = 0.08f;
+
+// Used when the Bento finger joints are missing: how far past the wrist, along
+// the forearm, the middle of the hand sits.
+static const F32 HAND_CENTER_OFFSET = 0.09f;
+
+// Feet are framed a little below their midpoint so the sole stays in frame.
+static const F32 FOOT_TARGET_DROP = 0.02f;
 
 // Render overrides while a series runs. LOD is normally computed for the
 // user's own camera, not ours, so close-ups would otherwise be captured at
@@ -140,12 +155,14 @@ LLFloaterAvatarLora::LLFloaterAvatarLora(const LLSD& key)
     , mClassEditor(nullptr)
     , mExtraTagsEditor(nullptr)
     , mWriteCaptionsCheck(nullptr)
+    , mTagsInFileNameCheck(nullptr)
     , mTotalImagesText(nullptr)
     , mEstimatedSizeText(nullptr)
     , mPreviewPrevBtn(nullptr)
     , mPreviewNextBtn(nullptr)
     , mPreviewLabel(nullptr)
     , mStartBtn(nullptr)
+    , mStartFaceBtn(nullptr)
     , mStopBtn(nullptr)
     , mProgressBar(nullptr)
     , mStatusText(nullptr)
@@ -170,7 +187,7 @@ LLFloaterAvatarLora::LLFloaterAvatarLora(const LLSD& key)
     , mSavedMaxNonImpostors(12)
     , mSavedNameTagMode(0)
 {
-    for (S32 i = 0; i < SHOT_GROUP_COUNT; ++i)
+    for (S32 i = 0; i < SHOT_TYPE_COUNT; ++i)
     {
         mGroupCounter[i] = 0;
     }
@@ -224,6 +241,7 @@ bool LLFloaterAvatarLora::postBuild()
     mClassEditor = getChild<LLLineEditor>("class_token");
     mExtraTagsEditor = getChild<LLLineEditor>("extra_tags");
     mWriteCaptionsCheck = getChild<LLCheckBoxCtrl>("write_captions");
+    mTagsInFileNameCheck = getChild<LLCheckBoxCtrl>("tags_in_filename");
 
     mTotalImagesText = getChild<LLTextBox>("total_images_result");
     mEstimatedSizeText = getChild<LLTextBox>("estimated_size");
@@ -231,6 +249,7 @@ bool LLFloaterAvatarLora::postBuild()
     mPreviewNextBtn = getChild<LLButton>("preview_next_btn");
     mPreviewLabel = getChild<LLTextBox>("preview_label");
     mStartBtn = getChild<LLButton>("start_btn");
+    mStartFaceBtn = getChild<LLButton>("start_face_btn");
     mStopBtn = getChild<LLButton>("stop_btn");
     mProgressBar = getChild<LLProgressBar>("capture_progress");
     mStatusText = getChild<LLTextBox>("status_text");
@@ -247,7 +266,8 @@ bool LLFloaterAvatarLora::postBuild()
 
     mPreviewPrevBtn->setCommitCallback(boost::bind(&LLFloaterAvatarLora::onPreviewStep, this, -1));
     mPreviewNextBtn->setCommitCallback(boost::bind(&LLFloaterAvatarLora::onPreviewStep, this, 1));
-    mStartBtn->setCommitCallback(boost::bind(&LLFloaterAvatarLora::onStartBtn, this));
+    mStartBtn->setCommitCallback(boost::bind(&LLFloaterAvatarLora::onStartBtn, this, CAPTURE_BODY));
+    mStartFaceBtn->setCommitCallback(boost::bind(&LLFloaterAvatarLora::onStartBtn, this, CAPTURE_FACE));
     mStopBtn->setCommitCallback(boost::bind(&LLFloaterAvatarLora::onStopBtn, this));
 
     mProgressBar->setValue(0.0);
@@ -482,6 +502,37 @@ bool LLFloaterAvatarLora::measureAvatar(LLVOAvatar* avatar, AvatarMetrics& metri
         metrics.mWrist[side] = wrist[side]->getWorldPosition();
         metrics.mElbow[side] = elbow[side]->getWorldPosition();
         metrics.mAnkle[side] = ankle[side]->getWorldPosition();
+
+        // Aim between wrist and fingertip, otherwise the frame sits on the
+        // wrist and the hand itself ends up in the edge of the picture.
+        LLJoint* finger_tip = avatar->getJoint(side == 0 ? "mHandMiddle3Left" : "mHandMiddle3Right");
+        if (finger_tip)
+        {
+            metrics.mHandCenter[side] = (metrics.mWrist[side] + finger_tip->getWorldPosition()) * 0.5f;
+        }
+        else
+        {
+            LLVector3 forearm = metrics.mWrist[side] - metrics.mElbow[side];
+            if (forearm.normalize() > 0.f)
+            {
+                metrics.mHandCenter[side] = metrics.mWrist[side] + forearm * (HAND_CENTER_OFFSET * metrics.mScale);
+            }
+            else
+            {
+                metrics.mHandCenter[side] = metrics.mWrist[side];
+            }
+        }
+
+        // Same for the foot: the ankle is at the back of it, so centre on the
+        // middle of the foot and drop a little to keep the sole in frame.
+        LLJoint* toe = avatar->getJoint(side == 0 ? "mToeLeft" : "mToeRight");
+        LLJoint* foot = avatar->getJoint(side == 0 ? "mFootLeft" : "mFootRight");
+        LLJoint* front = toe ? toe : foot;
+
+        metrics.mFootCenter[side] = front
+            ? (metrics.mAnkle[side] + front->getWorldPosition()) * 0.5f
+            : metrics.mAnkle[side];
+        metrics.mFootCenter[side].mV[VZ] -= FOOT_TARGET_DROP * metrics.mScale;
     }
     metrics.mHipMid = (hip[0]->getWorldPosition() + hip[1]->getWorldPosition()) * 0.5f;
 
@@ -528,6 +579,13 @@ bool LLFloaterAvatarLora::measureAvatar(LLVOAvatar* avatar, AvatarMetrics& metri
         metrics.mHeadCenter = head_pos;
         metrics.mHeadCenter.mV[VZ] += EYE_ABOVE_HEAD_JOINT * metrics.mScale;
     }
+
+    // The eyes sit at the front of the skull, so orbiting around them brings
+    // the camera far too close behind the head. The head orbit therefore turns
+    // around the middle of the skull: the head joint's axis, half way up to
+    // the crown.
+    metrics.mSkullCenter = head_pos;
+    metrics.mSkullCenter.mV[VZ] = (head_pos.mV[VZ] + metrics.mHeadTopZ) * 0.5f;
 
     LLVector3 forward = LLVector3::x_axis * avatar->getRenderRotation();
     forward.mV[VZ] = 0.f;
@@ -713,35 +771,67 @@ bool LLFloaterAvatarLora::buildShotList()
             break;
 
         case SHOT_HEAD:
-            addOrbit(SHOT_HEAD, steps, metrics.mHeadCenter, FRAME_HEAD * metrics.mScale, fov_detail, level_only, metrics);
+            addOrbit(SHOT_HEAD, steps, metrics.mSkullCenter, FRAME_HEAD * metrics.mScale, fov_detail, level_only, metrics);
             break;
 
         case SHOT_HANDS:
-        {
-            // Aim between elbow and wrist so the forearm stays in frame.
-            LLVector3 targets[2];
-            for (S32 side = 0; side < 2; ++side)
-            {
-                targets[side] = metrics.mWrist[side] + (metrics.mElbow[side] - metrics.mWrist[side]) * 0.25f;
-            }
-            addDetailShots(SHOT_HANDS, steps, targets, FRAME_HANDS * metrics.mScale, fov_detail, HANDS_ELEVATION, metrics);
+            addDetailShots(SHOT_HANDS, steps, metrics.mHandCenter, FRAME_HANDS * metrics.mScale, fov_detail, HANDS_ELEVATION, metrics);
             break;
-        }
 
         case SHOT_FEET:
-        {
-            LLVector3 targets[2];
-            for (S32 side = 0; side < 2; ++side)
-            {
-                targets[side] = metrics.mAnkle[side];
-                targets[side].mV[VZ] -= ANKLE_TO_SOLE * metrics.mScale;
-            }
-            addDetailShots(SHOT_FEET, steps, targets, FRAME_FEET * metrics.mScale, fov_detail, FEET_ELEVATION, metrics);
+            addDetailShots(SHOT_FEET, steps, metrics.mFootCenter, FRAME_FEET * metrics.mScale, fov_detail, FEET_ELEVATION, metrics);
             break;
-        }
 
         default:
             break;
+        }
+    }
+
+    return !mShots.empty();
+}
+
+bool LLFloaterAvatarLora::buildFaceShotList()
+{
+    mShots.clear();
+
+    AvatarMetrics metrics;
+    if (!measureAvatar(getSelectedAvatar(), metrics))
+    {
+        return false;
+    }
+
+    mCaptureMetrics = metrics;
+
+    F32 fov = llclamp((F32)mFovDetailSpinner->get(), 5.f, 120.f) * DEG_TO_RAD;
+    F32 distance = distanceForFrameHeight(FRAME_FACE * metrics.mScale, fov);
+
+    // Tight on the face, so this one stays centred on the eyes rather than on
+    // the middle of the skull - just dropped slightly to keep the chin in.
+    LLVector3 target = metrics.mHeadCenter;
+    target.mV[VZ] -= FACE_CENTER_BELOW_EYES * metrics.mScale;
+    LLVector3d target_global = gAgent.getPosGlobalFromAgent(target);
+
+    const F32 elevations[3] = { 0.f, (F32)mElevationHighSpinner->get(), (F32)mElevationLowSpinner->get() };
+
+    for (F32 elevation : elevations)
+    {
+        for (S32 i = 0; i < FACE_AZIMUTH_STEPS; ++i)
+        {
+            // Both profiles included, so the sweep runs end to end.
+            F32 t = (FACE_AZIMUTH_STEPS == 1) ? 0.5f : (F32)i / (F32)(FACE_AZIMUTH_STEPS - 1);
+
+            LoraShot shot;
+            shot.mGroup = SHOT_FACE;
+            shot.mSide = -1;
+            shot.mAzimuthDeg = -FACE_AZIMUTH_LIMIT + t * (2.f * FACE_AZIMUTH_LIMIT);
+            shot.mElevationDeg = elevation;
+            shot.mTargetGlobal = target_global;
+            shot.mDistance = distance;
+            shot.mFovRad = fov;
+            shot.mCameraGlobal = target_global +
+                LLVector3d(cameraOffsetFor(metrics.mForward, shot.mAzimuthDeg, elevation, distance));
+
+            mShots.push_back(shot);
         }
     }
 
@@ -752,9 +842,20 @@ bool LLFloaterAvatarLora::buildShotList()
 // Framing preview
 //---------------------------------------------------------------------------
 
+// static
+const char* LLFloaterAvatarLora::groupSuffix(EShotGroup group)
+{
+    if (group == SHOT_FACE)
+    {
+        return "face";
+    }
+
+    return sGroups[group].mCtrlSuffix;
+}
+
 std::string LLFloaterAvatarLora::shotLabel(const LoraShot& shot) const
 {
-    std::string label = getString(std::string("group_") + sGroups[shot.mGroup].mCtrlSuffix);
+    std::string label = getString(std::string("group_") + groupSuffix(shot.mGroup));
 
     if (shot.mSide >= 0)
     {
@@ -911,6 +1012,7 @@ void LLFloaterAvatarLora::loadSettings()
     mClassEditor->setValue(gSavedSettings.getString("FSLoraCaptureClassToken"));
     mExtraTagsEditor->setValue(gSavedSettings.getString("FSLoraCaptureExtraTags"));
     mWriteCaptionsCheck->set(gSavedSettings.getBOOL("FSLoraCaptureWriteCaptions"));
+    mTagsInFileNameCheck->set(gSavedSettings.getBOOL("FSLoraCaptureTagsInFileName"));
 }
 
 void LLFloaterAvatarLora::saveSettings()
@@ -940,19 +1042,20 @@ void LLFloaterAvatarLora::saveSettings()
     gSavedSettings.setString("FSLoraCaptureClassToken", mClassEditor->getValue().asString());
     gSavedSettings.setString("FSLoraCaptureExtraTags", mExtraTagsEditor->getValue().asString());
     gSavedSettings.setBOOL("FSLoraCaptureWriteCaptions", mWriteCaptionsCheck->get());
+    gSavedSettings.setBOOL("FSLoraCaptureTagsInFileName", mTagsInFileNameCheck->get());
 }
 
 //---------------------------------------------------------------------------
 // Capture run
 //---------------------------------------------------------------------------
 
-void LLFloaterAvatarLora::onStartBtn()
+void LLFloaterAvatarLora::onStartBtn(ECaptureMode mode)
 {
     if (mCapturing)
         return;
 
     // Freeze the plan once, here: everything from now on works off this list.
-    if (!buildShotList())
+    if (!((mode == CAPTURE_FACE) ? buildFaceShotList() : buildShotList()))
     {
         mStatusText->setText(getString("status_measure_failed"));
         return;
@@ -998,11 +1101,15 @@ void LLFloaterAvatarLora::startCapture()
         return;
     }
 
+    // Frozen with the shot plan, so editing the tag field mid-run cannot split
+    // one series across two file name prefixes.
+    mVariantToken = buildVariantToken();
+
     mRawImage = new LLImageRaw(mImageWidth, mImageHeight, 3);
     mCurrentShot = 0;
     mSavedImages = 0;
     mManifestShots = LLSD::emptyArray();
-    for (S32 i = 0; i < SHOT_GROUP_COUNT; ++i)
+    for (S32 i = 0; i < SHOT_TYPE_COUNT; ++i)
     {
         mGroupCounter[i] = 0;
     }
@@ -1272,6 +1379,63 @@ std::string LLFloaterAvatarLora::sanitizeForPath(const std::string& text)
     return result;
 }
 
+// static
+// Folds free text into a short lowercase file name token: "Red Dress!" -> "red_dress".
+std::string LLFloaterAvatarLora::sanitizeForFileToken(const std::string& text)
+{
+    const size_t max_length = 32;
+
+    std::string result;
+    result.reserve(llmin(text.size(), max_length));
+
+    bool pending_separator = false;
+    for (char c : text)
+    {
+        bool keep = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '-';
+        if (!keep)
+        {
+            // Runs of spaces and punctuation collapse into a single underscore,
+            // and a trailing one is dropped below.
+            pending_separator = !result.empty();
+            continue;
+        }
+
+        if (result.size() >= max_length)
+            break;
+
+        if (pending_separator)
+        {
+            result += '_';
+            pending_separator = false;
+            if (result.size() >= max_length)
+                break;
+        }
+
+        result += (char)tolower((unsigned char)c);
+    }
+
+    return result;
+}
+
+// The first extra tag names the series: capturing the same avatar in a second
+// outfit or with a different expression writes a distinct set of files instead
+// of overwriting the previous run.
+std::string LLFloaterAvatarLora::buildVariantToken() const
+{
+    if (!mTagsInFileNameCheck->get())
+        return LLStringUtil::null;
+
+    std::string tags = mExtraTagsEditor->getValue().asString();
+
+    size_t separator = tags.find_first_of(",;");
+    if (separator != std::string::npos)
+    {
+        tags.erase(separator);
+    }
+
+    return sanitizeForFileToken(tags);
+}
+
 bool LLFloaterAvatarLora::prepareOutputDirs()
 {
     const std::string delimiter = gDirUtilp->getDirDelimiter();
@@ -1403,7 +1567,8 @@ std::string LLFloaterAvatarLora::buildCaption(const LoraShot& shot) const
     case SHOT_UPPERBODY: subject = "upper body shot"; break;
     case SHOT_MIDBODY:   subject = "torso and hips"; break;
     case SHOT_LEGS:      subject = "legs"; break;
-    case SHOT_HEAD:      subject = "headshot, close-up of the face"; break;
+    case SHOT_HEAD:      subject = "headshot"; break;
+    case SHOT_FACE:      subject = "close-up portrait of the face"; break;
     case SHOT_HANDS:     subject = llformat("close-up of the %s hand and forearm", side_word); break;
     case SHOT_FEET:      subject = llformat("close-up of the %s foot and lower leg", side_word); break;
     default:             subject = "photo"; break;
@@ -1480,7 +1645,11 @@ void LLFloaterAvatarLora::recordManifestEntry(const LoraShot& shot, const std::s
 {
     LLSD entry;
     entry["file"] = mImageRelDir.empty() ? file_name : (mImageRelDir + "/" + file_name);
-    entry["group"] = sGroups[shot.mGroup].mCtrlSuffix;
+    entry["group"] = groupSuffix(shot.mGroup);
+    if (!mVariantToken.empty())
+    {
+        entry["variant"] = mVariantToken;
+    }
     if (shot.mSide >= 0)
     {
         entry["side"] = (shot.mSide == 0) ? "left" : "right";
@@ -1518,7 +1687,15 @@ void LLFloaterAvatarLora::writeManifest()
     manifest["image_count"] = (S32)mManifestShots.size();
     manifest["shots"] = mManifestShots;
 
-    std::string full_path = mOutputDir + gDirUtilp->getDirDelimiter() + "capture_manifest.json";
+    // One manifest per series, for the same reason the images carry the variant.
+    std::string manifest_name = "capture_manifest";
+    if (!mVariantToken.empty())
+    {
+        manifest["variant"] = mVariantToken;
+        manifest_name += "_" + mVariantToken;
+    }
+
+    std::string full_path = mOutputDir + gDirUtilp->getDirDelimiter() + manifest_name + ".json";
 
     llofstream stream(full_path);
     if (!stream.is_open())
@@ -1544,8 +1721,16 @@ std::string LLFloaterAvatarLora::shotFileName(const LoraShot& shot, S32 index_in
 
     F32 azimuth = fmodf(shot.mAzimuthDeg + 360.f, 360.f);
 
-    return llformat("lora_%s%s_%03d_az%03.0f_el%+03.0f.png",
-                    sGroups[shot.mGroup].mCtrlSuffix, side.c_str(),
+    // The variant leads, so all files of one series sort together in a folder
+    // that holds several of them.
+    std::string variant;
+    if (!mVariantToken.empty())
+    {
+        variant = mVariantToken + "_";
+    }
+
+    return llformat("lora_%s%s%s_%03d_az%03.0f_el%+03.0f.png",
+                    variant.c_str(), groupSuffix(shot.mGroup), side.c_str(),
                     index_in_group, azimuth, shot.mElevationDeg);
 }
 
@@ -1690,5 +1875,9 @@ void LLFloaterAvatarLora::updateUIState()
     mPreviewNextBtn->setEnabled(can_preview);
 
     mStartBtn->setEnabled(!mCapturing && has_avatar && has_output_dir && total > 0);
+
+    // The face series has its own fixed plan, so it does not depend on the
+    // shot set above.
+    mStartFaceBtn->setEnabled(!mCapturing && has_avatar && has_output_dir);
     mStopBtn->setEnabled(mCapturing);
 }

@@ -31,6 +31,7 @@
 	<string name="group_midbody">Torso / hips</string>
 	<string name="group_legs">Legs</string>
 	<string name="group_head">Head</string>
+	<string name="group_face">Face</string>
 	<string name="group_hands">Hands</string>
 	<string name="group_feet">Feet</string>
 	<string name="side_left">left</string>
@@ -550,7 +551,7 @@
 	 layout="topleft"
 	 left_pad="0"
 	 name="extra_tags"
-	 tool_tip="Added to every caption, e.g. outfit or hair description."
+	 tool_tip="Added to every caption, e.g. outfit or hair description. Separate tags with commas."
 	 top_delta="0"
 	 width="180" />
 
@@ -561,6 +562,17 @@
 	 layout="topleft"
 	 left="340"
 	 name="write_captions"
+	 top_pad="4"
+	 width="280" />
+
+	<check_box
+	 height="20"
+	 initial_value="true"
+	 label="First tag in file names"
+	 layout="topleft"
+	 left="340"
+	 name="tags_in_filename"
+	 tool_tip="Puts the first extra tag into every file name, so a second series - another outfit, an open instead of a closed mouth - does not overwrite the first."
 	 top_pad="4"
 	 width="280" />
 
@@ -627,21 +639,32 @@
 	<button
 	 follows="left|top"
 	 height="23"
-	 label="Start capture"
+	 label="Capture body"
 	 layout="topleft"
 	 left="20"
 	 name="start_btn"
+	 tool_tip="Run the shot set configured on the left."
 	 top_pad="8"
-	 width="150" />
+	 width="120" />
+	<button
+	 follows="left|top"
+	 height="23"
+	 label="Capture face"
+	 layout="topleft"
+	 left_pad="8"
+	 name="start_face_btn"
+	 tool_tip="Separate close-up series of the face: 9 directions from the right profile to the left profile including exact front, at three heights (27 images). Ignores the shot set."
+	 top_delta="0"
+	 width="120" />
 	<button
 	 follows="left|top"
 	 height="23"
 	 label="Stop"
 	 layout="topleft"
-	 left_pad="10"
+	 left_pad="8"
 	 name="stop_btn"
 	 top_delta="0"
-	 width="80" />
+	 width="70" />
 
 	<spinner
 	 decimal_digits="0"
@@ -651,7 +674,7 @@
 	 label="Start delay (s)"
 	 label_width="90"
 	 layout="topleft"
-	 left_pad="20"
+	 left_pad="15"
 	 max_val="60"
 	 min_val="0"
 	 name="capture_delay"

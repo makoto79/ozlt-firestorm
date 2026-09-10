@@ -62,7 +62,9 @@ public:
 
     static void onIdle(void* user_data);
 
-    // Shot groups, in capture order.
+    // Shot groups, in capture order. Everything up to SHOT_GROUP_COUNT has its
+    // own checkbox and count in the shot set; SHOT_FACE is a separate series
+    // with its own button and a fixed plan.
     enum EShotGroup
     {
         SHOT_FULLBODY = 0,
@@ -72,7 +74,15 @@ public:
         SHOT_HEAD,
         SHOT_HANDS,
         SHOT_FEET,
-        SHOT_GROUP_COUNT
+        SHOT_GROUP_COUNT,
+        SHOT_FACE = SHOT_GROUP_COUNT,
+        SHOT_TYPE_COUNT
+    };
+
+    enum ECaptureMode
+    {
+        CAPTURE_BODY = 0,
+        CAPTURE_FACE
     };
 
     // One planned photo. The whole list is built up front from a single
@@ -101,13 +111,16 @@ private:
         F32         mHeadTopZ;
         LLVector3   mForward;       // horizontal facing direction, normalized
         LLVector3   mAxis;          // body axis (pelvis x/y)
-        LLVector3   mHeadCenter;
+        LLVector3   mHeadCenter;    // eye level - the face
+        LLVector3   mSkullCenter;   // middle of the skull - what the head orbit turns around
         LLVector3   mChest;
         LLVector3   mPelvis;
         LLVector3   mHipMid;
         LLVector3   mWrist[2];      // 0 = left, 1 = right
         LLVector3   mElbow[2];
         LLVector3   mAnkle[2];
+        LLVector3   mHandCenter[2]; // middle of the hand, not the wrist
+        LLVector3   mFootCenter[2]; // middle of the foot, not the ankle
 
         AvatarMetrics() : mValid(false), mHeight(0.f), mScale(1.f), mSoleZ(0.f), mHeadTopZ(0.f) {}
     };
@@ -151,6 +164,8 @@ private:
     // Measurement and shot plan
     bool        measureAvatar(LLVOAvatar* avatar, AvatarMetrics& metrics) const;
     bool        buildShotList();
+    bool        buildFaceShotList();
+    static const char* groupSuffix(EShotGroup group);
     void        addOrbit(EShotGroup group, S32 steps, const LLVector3& target,
                          F32 frame_height, F32 fov_rad, const std::vector<F32>& elevations,
                          const AvatarMetrics& metrics);
@@ -169,7 +184,7 @@ private:
     std::string shotLabel(const LoraShot& shot) const;
 
     // Capture run
-    void        onStartBtn();
+    void        onStartBtn(ECaptureMode mode);
     void        onStopBtn();
     void        startCapture();
     void        stopCapture(bool restore_camera);
@@ -182,6 +197,11 @@ private:
     void        freezeWorld(bool enable);
     bool        prepareOutputDirs();
     std::string shotFileName(const LoraShot& shot, S32 index_in_group) const;
+
+    // Series variant: the first extra tag, folded into every file name so a
+    // second series (other outfit, other expression) cannot overwrite the first.
+    std::string buildVariantToken() const;
+    static std::string sanitizeForFileToken(const std::string& text);
 
     // Dataset output: captions and manifest
     std::string buildCaption(const LoraShot& shot) const;
@@ -228,6 +248,7 @@ private:
     LLLineEditor*     mClassEditor;
     LLLineEditor*     mExtraTagsEditor;
     LLCheckBoxCtrl*   mWriteCaptionsCheck;
+    LLCheckBoxCtrl*   mTagsInFileNameCheck;
 
     LLTextBox*        mTotalImagesText;
     LLTextBox*        mEstimatedSizeText;
@@ -235,6 +256,7 @@ private:
     LLButton*         mPreviewNextBtn;
     LLTextBox*        mPreviewLabel;
     LLButton*         mStartBtn;
+    LLButton*         mStartFaceBtn;
     LLButton*         mStopBtn;
     LLProgressBar*    mProgressBar;
     LLTextBox*        mStatusText;
@@ -256,13 +278,14 @@ private:
     bool                  mCountdownActive;
     LLFrameTimer          mCountdownTimer;
     S32                   mCurrentShot;
-    S32                   mGroupCounter[SHOT_GROUP_COUNT];
+    S32                   mGroupCounter[SHOT_TYPE_COUNT];
     S32                   mImageWidth;
     S32                   mImageHeight;
     S32                   mSavedImages;
     std::string           mOutputDir;      // manifest lives here
     std::string           mImageDir;       // images and captions land here
     std::string           mImageRelDir;    // mImageDir relative to mOutputDir
+    std::string           mVariantToken;   // frozen at run start, empty if unused
     LLSD                  mManifestShots;
     AvatarMetrics         mCaptureMetrics;
     std::string           mCaptureAvatarName;

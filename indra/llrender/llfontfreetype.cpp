@@ -109,9 +109,10 @@ LLFontManager::~LLFontManager()
 LLFontGlyphInfo::LLFontGlyphInfo(U32 index, EFontGlyphType glyph_type)
 :   mGlyphIndex(index),
     mGlyphType(glyph_type),
+    mChar(0),
     mWidth(0),          // In pixels
     mHeight(0),         // In pixels
-    mXAdvance(0.f),     // In pixels
+    mXAdvanceRaw(0.f),  // In pixels
     mYAdvance(0.f),     // In pixels
     mXBitmapOffset(0),  // Offset to the origin in the bitmap
     mYBitmapOffset(0),  // Offset to the origin in the bitmap
@@ -126,9 +127,10 @@ LLFontGlyphInfo::LLFontGlyphInfo(U32 index, EFontGlyphType glyph_type)
 LLFontGlyphInfo::LLFontGlyphInfo(const LLFontGlyphInfo& fgi)
     : mGlyphIndex(fgi.mGlyphIndex)
     , mGlyphType(fgi.mGlyphType)
+    , mChar(fgi.mChar)
     , mWidth(fgi.mWidth)
     , mHeight(fgi.mHeight)
-    , mXAdvance(fgi.mXAdvance)
+    , mXAdvanceRaw(fgi.mXAdvanceRaw)
     , mYAdvance(fgi.mYAdvance)
     , mXBitmapOffset(fgi.mXBitmapOffset)
     , mYBitmapOffset(fgi.mYBitmapOffset)
@@ -150,7 +152,8 @@ LLFontFreetype::LLFontFreetype()
     mFTFace(nullptr),
     mRenderGlyphCount(0),
     mStyle(0),
-    mPointSize(0)
+    mPointSize(0),
+    mMaxDigitWidth(0.0f)
 {
 }
 
@@ -170,7 +173,9 @@ LLFontFreetype::~LLFontFreetype()
     // mFallbackFonts cleaned up by LLPointer destructor
 }
 
-bool LLFontFreetype::loadFace(const std::string& filename, F32 point_size, F32 vert_dpi, F32 horz_dpi, S32 weight, bool is_fallback, S32 face_n, EFontHinting hinting, S32 flags)
+// <FS:Ansariel> Optional tabular numeric font rendering
+//bool LLFontFreetype::loadFace(const std::string& filename, F32 point_size, F32 vert_dpi, F32 horz_dpi, S32 weight, bool is_fallback, S32 face_n, EFontHinting hinting, S32 flags)
+bool LLFontFreetype::loadFace(const std::string & filename, F32 point_size, F32 vert_dpi, F32 horz_dpi, S32 weight, bool is_fallback, S32 face_n, EFontHinting hinting, S32 flags, bool tabnum)
 {
     // Don't leak face objects.  This is also needed to deal with
     // changed font file names.
@@ -197,6 +202,7 @@ bool LLFontFreetype::loadFace(const std::string& filename, F32 point_size, F32 v
     mHinting = hinting;
     mFontFlags = flags;
     mWeight = weight;
+    mTabnum = tabnum; // <FS:Ansariel> Optional tabular numeric font rendering
 
     bool variable_font = false;
     if (weight >= 0)
@@ -343,14 +349,20 @@ F32 LLFontFreetype::getXAdvance(llwchar wch) const
     LLFontGlyphInfo* gi = getGlyphInfo(wch, EFontGlyphType::Unspecified);
     if (gi)
     {
-        return gi->mXAdvance;
+        // <FS:Ansariel> Optional tabular numeric font rendering
+        //if (wch >= '0' && wch <= '9' && mMaxDigitWidth > 0.0f)
+        if (mTabnum && wch >= '0' && wch <= '9' && mMaxDigitWidth > 0.0f)
+        {
+            return mMaxDigitWidth;
+        }
+        return gi->mXAdvanceRaw;
     }
     else
     {
         char_glyph_info_map_t::iterator found_it = mCharGlyphInfoMap.find((llwchar)0);
         if (found_it != mCharGlyphInfoMap.end())
         {
-            return found_it->second->mXAdvance;
+            return found_it->second->mXAdvanceRaw;
         }
     }
 
@@ -363,7 +375,15 @@ F32 LLFontFreetype::getXAdvance(const LLFontGlyphInfo* glyph) const
     if (mFTFace == nullptr)
         return 0.0;
 
-    return glyph->mXAdvance;
+    // Use max digit width for tabular numbers
+    // <FS:Ansariel> Optional tabular numeric font rendering
+    //if (mWeight > 0 && glyph->mChar >= '0' && glyph->mChar <= '9' && mMaxDigitWidth > 0.0f)
+    if (mTabnum && mWeight > 0 && glyph->mChar >= '0' && glyph->mChar <= '9' && mMaxDigitWidth > 0.0f)
+    {
+        return mMaxDigitWidth;
+    }
+
+    return glyph->mXAdvanceRaw;
 }
 
 F32 LLFontFreetype::getXKerning(llwchar char_left, llwchar char_right) const
@@ -384,8 +404,31 @@ F32 LLFontFreetype::getXKerning(const LLFontGlyphInfo* left_glyph_info, const LL
     if (mFTFace == nullptr)
         return 0.0;
 
-    U32 left_glyph = left_glyph_info ? left_glyph_info->mGlyphIndex : 0;
-    U32 right_glyph = right_glyph_info ? right_glyph_info->mGlyphIndex : 0;
+    U32 left_glyph = 0;
+    U32 right_glyph = 0;
+
+    if (left_glyph_info)
+    {
+        // <FS:Ansariel> Optional tabular numeric font rendering
+        //if (mWeight > 0 && left_glyph_info->mChar >= '0' && left_glyph_info->mChar <= '9')
+        if (mTabnum && mWeight > 0 && left_glyph_info->mChar >= '0' && left_glyph_info->mChar <= '9')
+        {
+            // Disable kerning for digits when using tabular numbers
+            return 0.0;
+        }
+        left_glyph = left_glyph_info->mGlyphIndex;
+    }
+    if (right_glyph_info)
+    {
+        // <FS:Ansariel> Optional tabular numeric font rendering
+        //if (mWeight > 0 && right_glyph_info->mChar >= '0' && right_glyph_info->mChar <= '9')
+        if (mTabnum && mWeight > 0 && right_glyph_info->mChar >= '0' && right_glyph_info->mChar <= '9')
+        {
+            // Disable kerning for digits when using tabular numbers
+            return 0.0;
+        }
+        right_glyph = right_glyph_info->mGlyphIndex;
+    }
 
     FT_Vector  delta;
 
@@ -548,6 +591,7 @@ LLFontGlyphInfo* LLFontFreetype::addGlyphFromFont(const LLFontFreetype *fontp, l
     mFontBitmapCachep->nextOpenPos(width, pos_x, pos_y, bitmap_glyph_type, bitmap_num);
 
     LLFontGlyphInfo* gi = new LLFontGlyphInfo(glyph_index, requested_glyph_type);
+    gi->mChar = wch;
     gi->mXBitmapOffset = pos_x;
     gi->mYBitmapOffset = pos_y;
     gi->mBitmapEntry = std::make_pair(bitmap_glyph_type, bitmap_num);
@@ -561,8 +605,18 @@ LLFontGlyphInfo* LLFontFreetype::addGlyphFromFont(const LLFontFreetype *fontp, l
     gi->mLsbDelta = (S32)fontp->mFTFace->glyph->lsb_delta;
     gi->mRsbDelta = (S32)fontp->mFTFace->glyph->rsb_delta;
     // Convert these from 26.6 units to float pixels.
-    gi->mXAdvance = fontp->mFTFace->glyph->advance.x / 64.f;
+    gi->mXAdvanceRaw = fontp->mFTFace->glyph->advance.x / 64.f;
     gi->mYAdvance = fontp->mFTFace->glyph->advance.y / 64.f;
+
+    // <FS:Ansariel> Optional tabular numeric font rendering
+    //if (mWeight > 0 && wch >= '0' && wch <= '9')
+    if (mTabnum && mWeight > 0 && wch >= '0' && wch <= '9')
+    {
+        // Digits are supposed to be preloaded, and buffers
+        // refresh when new chars get added (mGeneration),
+        // so this lazy load should not cause any issues.
+        mMaxDigitWidth = llmax(mMaxDigitWidth, gi->mXAdvanceRaw);
+    }
 
     insertGlyphInfo(wch, gi);
 
@@ -737,7 +791,9 @@ void LLFontFreetype::renderGlyph(EFontGlyphType bitmap_type, U32 glyph_index, ll
 void LLFontFreetype::reset(F32 vert_dpi, F32 horz_dpi)
 {
     resetBitmapCache();
-    loadFace(mName, mPointSize, vert_dpi ,horz_dpi, mWeight, mIsFallback, 0, mHinting, mFontFlags);
+    // <FS:Ansariel> Optional tabular numeric font rendering
+    //loadFace(mName, mPointSize, vert_dpi ,horz_dpi, mWeight, mIsFallback, 0, mHinting, mFontFlags);
+    loadFace(mName, mPointSize, vert_dpi, horz_dpi, mWeight, mIsFallback, 0, mHinting, mFontFlags, mTabnum);
     if (!mIsFallback)
     {
         // This is the head of the list - need to rebuild ourself and all fallbacks.
@@ -765,6 +821,7 @@ void LLFontFreetype::resetBitmapCache()
     }
     mCharGlyphInfoMap.clear();
     mFontBitmapCachep->reset();
+    mMaxDigitWidth = 0.0f;
 
     // Adding default glyph is skipped for fallback fonts here as well as in loadFace().
     // This if was added as fix for EXT-4971.
@@ -997,30 +1054,39 @@ namespace ll
 
 U8 const* LLFontManager::loadFont( std::string const &aFilename, long &a_Size)
 {
-    a_Size = 0;
-    std::map< std::string, std::shared_ptr<ll::fonts::LoadedFont> >::iterator itr = m_LoadedFonts.find( aFilename );
-    if( itr != m_LoadedFonts.end() )
+    try
     {
-        ++itr->second->mRefs;
-        // A possible overflow cannot happen here, as it is asserted that the size is less than std::numeric_limits<long>::max() a few lines below.
-        a_Size = static_cast<long>(itr->second->mSize);
+        a_Size = 0;
+        std::map< std::string, std::shared_ptr<ll::fonts::LoadedFont> >::iterator itr = m_LoadedFonts.find(aFilename);
+        if (itr != m_LoadedFonts.end())
+        {
+            ++itr->second->mRefs;
+            // A possible overflow cannot happen here, as it is asserted that the size is less than std::numeric_limits<long>::max() a few lines below.
+            a_Size = static_cast<long>(itr->second->mSize);
+            return reinterpret_cast<U8 const*>(itr->second->mAddress.c_str());
+        }
+
+        auto strContent = LLFile::getContents(aFilename);
+
+        if (strContent.empty())
+            return nullptr;
+
+        // For fontconfig a type of long is required, std::string::size() returns size_t. I think it is safe to limit this to 2GiB and not support fonts that huge (can that even be a thing?)
+        llassert_always(strContent.size() < std::numeric_limits<long>::max());
+
+        a_Size = static_cast<long>(strContent.size());
+
+        auto pCache = std::make_shared<ll::fonts::LoadedFont>(aFilename, strContent, a_Size);
+        itr = m_LoadedFonts.insert(std::make_pair(aFilename, pCache)).first;
+
         return reinterpret_cast<U8 const*>(itr->second->mAddress.c_str());
     }
-
-    auto strContent = LLFile::getContents(aFilename);
-
-    if( strContent.empty() )
-        return nullptr;
-
-    // For fontconfig a type of long is required, std::string::size() returns size_t. I think it is safe to limit this to 2GiB and not support fonts that huge (can that even be a thing?)
-    llassert_always( strContent.size() < std::numeric_limits<long>::max() );
-
-    a_Size = static_cast<long>(strContent.size());
-
-    auto pCache = std::make_shared<ll::fonts::LoadedFont>( aFilename,  strContent, a_Size );
-    itr = m_LoadedFonts.insert( std::make_pair( aFilename, pCache ) ).first;
-
-    return reinterpret_cast<U8 const*>(itr->second->mAddress.c_str());
+    catch (const std::bad_alloc&)
+    {
+        LLError::LLUserWarningMsg::showOutOfMemory();
+        LL_ERRS() << "Failed to load font. Out of memory." << LL_ENDL;
+    }
+    return nullptr;
 }
 
 void LLFontManager::unloadAllFonts()

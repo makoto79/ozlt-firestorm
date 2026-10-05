@@ -34,6 +34,7 @@
 #include <unordered_set>
 
 class LLButton;
+class LLContextMenu;
 class LLFilterEditor;
 class LLInventoryPanel;
 class LLPanel;
@@ -51,6 +52,7 @@ public:
 
     bool handleRightMouseDown(S32 x, S32 y);
     bool handleMouseDown(S32 x, S32 y);
+    bool handleDragAndDrop(S32 x, S32 y);
 
     void noteActivePanel(LLInventoryPanel* panel);
     void notifyActiveFilterStateChanged();
@@ -61,12 +63,15 @@ public:
 
     bool isCustomTab(const LLPanel* panel) const;
     bool isAddTab(const LLPanel* panel) const;
+    bool isShowHiddenTab(const LLPanel* panel) const;
     void onAddTabSelected();
     void onAddClicked();
+    void onShowHiddenClicked();
 
     void onRenameClicked();
     void onCloneClicked();
     void onCloseClicked();
+    void onHideClicked();
 
     static void install(LLPanelMainInventory* parent, LLFilterEditor* filter_editor);
     static void notifyFilterStateChanged(LLPanelMainInventory* parent);
@@ -77,6 +82,7 @@ public:
     static void notifyIfFilterChanged(LLPanelMainInventory* parent, S32 prev_generation);
     static bool handleRightMouseDown(LLPanelMainInventory* parent, S32 x, S32 y);
     static bool handleMouseDown(LLPanelMainInventory* parent, S32 x, S32 y);
+    static bool handleDragAndDrop(LLPanelMainInventory* parent, S32 x, S32 y);
     static void onParentDraw(LLPanelMainInventory* parent);
 
 private:
@@ -89,6 +95,11 @@ private:
     bool isUnchangedSetting(const LLSD& array) const;
     void clearCustomTabs();
     void installAddTab();
+    void installShowHiddenTab();
+    void hideTab(LLInventoryPanel* panel);
+    void showTab(LLInventoryPanel* panel);
+    void updateShowHiddenTabVisibility();
+    void selectNearestVisibleTab(LLInventoryPanel* skip_panel);
     void onSettingChangedExternally();
     void onRenameConfirmed(const LLSD& notification, const LLSD& response);
     void onCloseConfirmed(const LLSD& notification, const LLSD& response);
@@ -103,6 +114,7 @@ private:
     void updateAutoLabel(LLInventoryPanel* panel);
     std::string computeDisplayLabel(LLInventoryPanel* panel) const;
     LLInventoryPanel* hitTestCustomTab(S32 x, S32 y, S32& tab_local_x, S32& tab_local_y) const;
+    LLInventoryPanel* hitTestAddTab(S32 x, S32 y, S32& tab_local_x, S32& tab_local_y) const;
 
     static std::string getDefaultTabName();
     static std::string sanitizeTabName(std::string name);
@@ -110,16 +122,20 @@ private:
     LLPanelMainInventory* mParent{ nullptr };
     LLTabContainer* mTabs{ nullptr };
     LLHandle<LLView> mMenuHandle;
+    LLHandle<LLContextMenu> mHiddenMenuHandle;
     std::set<LLInventoryPanel*> mPanels;
     std::unordered_set<LLInventoryPanel*> mExplicitlyNamed;
     std::unordered_set<LLInventoryPanel*> mPendingRootOpen;
+    std::unordered_set<LLInventoryPanel*> mHidden;
     LLInventoryPanel* mContextPanel{ nullptr };
     LLInventoryPanel* mAddTabPanel{ nullptr };
+    LLInventoryPanel* mShowHiddenTabPanel{ nullptr };
     LLInventoryPanel* mLastActivePanel{ nullptr };
     LLNotificationPtr mRenameNotification;
     LLNotificationPtr mCloseNotification;
     boost::signals2::connection mSettingConnection;
     boost::signals2::connection mAddClickConnection;
+    boost::signals2::connection mShowHiddenClickConnection;
     bool mSaving{ false };
     bool mLoading{ false };
     bool mLoadedOk{ false };

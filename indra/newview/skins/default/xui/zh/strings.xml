@@ -1812,6 +1812,9 @@ support@secondlife.com.
 	<string name="FSInventoryCustomTabDefaultName">
 		自訂
 	</string>
+	<string name="FSInventoryCustomTabShowHidden">
+		顯示隱藏分頁
+	</string>
 	<string name="PlacesNoMatchingItems">
 		要將地點添加到您的地標，請點擊地點名稱右側的星形圖標。
 	</string>
@@ -1832,6 +1835,9 @@ support@secondlife.com.
 	</string>
 	<string name="InventoryNoTexture">
 		你的庫存中沒有這個紋理的副本。
+	</string>
+	<string name="InventoryNoMaterial">
+		你的庫存中沒有這個材質的副本。
 	</string>
 	<string name="InventoryInboxNoItems">
 		你在第二人生市場中購買的物件將會出現在這裡。你可以將其拖入庫存區使用。
@@ -3352,7 +3358,7 @@ support@secondlife.com.
 		播放/暫停媒體
 	</string>
 	<string name="StreamtitleNowPlaying">
-		正在播放：
+		正在播放： [TITLE]
 	</string>
 	<!-- Drivers support/update pages -->
 	<string name="IntelDriverPage">
@@ -7595,5 +7601,8 @@ SecondLife.com網站的「支援」部分
 	</string>
 	<string name="OmnifilterDefaultName">
 		預設
+	</string>
+	<string name="FSMacOSNewViewerInstance">
+		新查看器執行個體
 	</string>
 </strings>

@@ -67,6 +67,7 @@ class LLWindow;
 class LLRootView;
 class LLWindowListener;
 class LLViewerWindowListener;
+class LLStatsListener;
 class LLVOPartGroup;
 class LLPopupView;
 class LLCubeMap;
@@ -232,7 +233,7 @@ public:
     /*virtual*/ void handleWindowUnblock(LLWindow *window);
     /*virtual*/ void handleDataCopy(LLWindow *window, S32 data_type, void *data);
     /*virtual*/ bool handleTimerEvent(LLWindow *window);
-    /*virtual*/ bool handleDeviceChange(LLWindow *window, bool deviceRemoved); // <FS:Dax/> [FIRE-10419] Added deviceRemoved bool to prevent reinitialize on disconnect.
+    /*virtual*/ bool handleDeviceChange(LLWindow *window, const std::string& change_type, bool deviceIsJoystick, bool deviceRemoved); // <FS:Dax/> [FIRE-10419] Added deviceRemoved bool to prevent reinitialize on disconnect.
     /*virtual*/ bool handleDPIChanged(LLWindow *window, F32 ui_scale_factor, S32 window_width, S32 window_height);
     /*virtual*/ bool handleDisplayChanged();
     /*virtual*/ bool handleWindowDidChangeScreen(LLWindow *window);
@@ -324,7 +325,10 @@ public:
     void            moveCursorToCenter();                               // move to center of window
 
     void            initTextures(S32 location_id);
+    // <FS:Zi> Fade teleport screens
+    //void            setShowProgress(const bool show);
     void            setShowProgress(const bool show, bool fullscreen);
+    // </FS:Zi>
     bool            getShowProgress() const;
     void            setProgressString(const std::string& string);
     void            setProgressPercent(const F32 percent);
@@ -569,6 +573,7 @@ private:
 
     std::unique_ptr<LLWindowListener> mWindowListener;
     std::unique_ptr<LLViewerWindowListener> mViewerWindowListener;
+    std::unique_ptr<LLStatsListener> mStatsListener;
 
     // Object temporarily hovered over while dragging
     LLPointer<LLViewerObject>   mDragHoveredObject;

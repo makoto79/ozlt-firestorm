@@ -700,7 +700,9 @@ void LLPipeline::init()
     {
         cntrl_ptr->getCommitSignal()->connect([](LLControlVariable* control, const LLSD& value, const LLSD& previous)
         {
-            LLFontVertexBuffer::enableBufferCollection(control->getValue().asBoolean());
+            bool enable_buffers = control->getValue().asBoolean();
+            LLFontVertexBuffer::enableBufferCollection(enable_buffers);
+            LLFontWidthBuffer::enableBufferCollection(enable_buffers);
         });
     }
 }
@@ -1327,7 +1329,9 @@ void LLPipeline::refreshCachedSettings()
         LLVOAvatar::updateImpostorRendering(LLVOAvatar::sMaxNonImpostors);
     }
 
-    LLFontVertexBuffer::enableBufferCollection(gSavedSettings.getBOOL("CollectFontVertexBuffers"));
+    bool enable_buffers = gSavedSettings.getBOOL("CollectFontVertexBuffers");
+    LLFontVertexBuffer::enableBufferCollection(enable_buffers);
+    LLFontWidthBuffer::enableBufferCollection(enable_buffers);
 }
 
 void LLPipeline::releaseGLBuffers()
@@ -11900,6 +11904,9 @@ void LLPipeline::generateImpostor(LLVOAvatar* avatar, bool preview_avatar, bool 
     LL_DEBUGS_ONCE("AvatarRenderPipeline") << "Avatar " << avatar->getID()
                               << " is " << ( too_complex ? "" : "not ") << "too complex"
                               << LL_ENDL;
+    // <FS> FIRE-34340-2 RLV silhouettes need full avatar geometry, not jelly-doll-only
+    bool rlv_silhouette = !for_profile && !preview_avatar && avatar->isRlvSilhouette();
+    // </FS>
 
     pushRenderTypeMask();
 
@@ -12164,7 +12171,9 @@ void LLPipeline::generateImpostor(LLVOAvatar* avatar, bool preview_avatar, bool 
 
         LLGLDisable blend(GL_BLEND);
 
-        if (visually_muted || too_complex)
+        // <FS> FIRE-34340-2 RLV silhouettes need a solid color baked into the impostor too
+        if (visually_muted || too_complex || rlv_silhouette)
+        // </FS>
         {
             gGL.setColorMask(true, true);
         }
@@ -12189,7 +12198,9 @@ void LLPipeline::generateImpostor(LLVOAvatar* avatar, bool preview_avatar, bool 
 
         gDebugProgram.bind();
 
-        if (visually_muted)
+        // <FS> FIRE-34340-2 Use getMutedAVColor() for all muted/silhouette avatars
+        if (visually_muted || rlv_silhouette)
+        // </FS>
         {   // Visually muted avatar
             LLColor4 muted_color(avatar->getMutedAVColor());
             LL_DEBUGS_ONCE("AvatarRenderPipeline") << "Avatar " << avatar->getID() << " MUTED set solid color " << muted_color << LL_ENDL;

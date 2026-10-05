@@ -59,6 +59,10 @@ namespace
     constexpr char CLOSE_ICON_NAME[]    = "Icon_Close_Foreground";
     constexpr char CLOSE_ICON_PRESS[]   = "Icon_Close_Press";
     constexpr char TAB_BUTTON_PREFIX[]  = "htab_";
+    constexpr char SHOW_HIDDEN_PANEL_NAME[] = "FSInventoryCustomTabShowHidden";
+    constexpr char SHOW_HIDDEN_ICON_NAME[]  = "Arrow_Down";
+    constexpr char HIDDEN_MENU_NAME[]   = "fs_inv_hidden_tabs_menu";
+    constexpr char TABHIDDEN_KEY[]      = "tabhidden";
     constexpr S32  CLOSE_ICON_SIZE      = 16;
     constexpr S32  CLOSE_ICON_MARGIN    = 4;
     constexpr S32  CLOSE_BUTTON_RESERVE = CLOSE_ICON_SIZE + CLOSE_ICON_MARGIN + 2;
@@ -100,6 +104,7 @@ FSInventoryCustomTabs::FSInventoryCustomTabs(LLPanelMainInventory* parent)
     }
 
     installAddTab();
+    installShowHiddenTab();
     allInstances().insert(this);
 }
 
@@ -124,6 +129,10 @@ FSInventoryCustomTabs::~FSInventoryCustomTabs()
     {
         mAddClickConnection.disconnect();
     }
+    if (mShowHiddenClickConnection.connected())
+    {
+        mShowHiddenClickConnection.disconnect();
+    }
     if (mTabs && !mPanels.empty())
     {
         save();
@@ -132,6 +141,15 @@ FSInventoryCustomTabs::~FSInventoryCustomTabs()
     {
         menu->die();
         mMenuHandle.markDead();
+    }
+    if (auto* hidden_menu = mHiddenMenuHandle.get())
+    {
+        if (gMenuHolder)
+        {
+            gMenuHolder->removeChild(hidden_menu);
+        }
+        delete hidden_menu;
+        mHiddenMenuHandle.markDead();
     }
 }
 
@@ -149,6 +167,7 @@ void FSInventoryCustomTabs::registerCommitCallbacks(LLPanelMainInventory* parent
     reg.add("FSInventoryCustomTab.Rename", [parent](LLUICtrl*, const LLSD&) { if (auto* self = instanceFor(parent)) self->onRenameClicked(); });
     reg.add("FSInventoryCustomTab.Clone",  [parent](LLUICtrl*, const LLSD&) { if (auto* self = instanceFor(parent)) self->onCloneClicked();  });
     reg.add("FSInventoryCustomTab.Close",  [parent](LLUICtrl*, const LLSD&) { if (auto* self = instanceFor(parent)) self->onCloseClicked();  });
+    reg.add("FSInventoryCustomTab.Hide",   [parent](LLUICtrl*, const LLSD&) { if (auto* self = instanceFor(parent)) self->onHideClicked();   });
 }
 
 bool FSInventoryCustomTabs::handleRightMouseDown(S32 x, S32 y)
@@ -197,6 +216,20 @@ bool FSInventoryCustomTabs::handleMouseDown(S32 x, S32 y)
     }
 
     onClosePressed(inv_panel);
+    return true;
+}
+
+bool FSInventoryCustomTabs::handleDragAndDrop(S32 x, S32 y)
+{
+    S32 local_x = 0;
+    S32 local_y = 0;
+    auto* inv_panel = hitTestAddTab(x, y, local_x, local_y);
+    if (!inv_panel)
+    {
+        return false;
+    }
+    // Drag and drop onto the Add button should not do anything
+    // Return true here to prevent calling LLPanel::handleDragAndDrop
     return true;
 }
 
@@ -256,6 +289,80 @@ void FSInventoryCustomTabs::onAddClicked()
     }
 }
 
+void FSInventoryCustomTabs::onShowHiddenClicked()
+{
+    if (!mTabs || mHidden.empty())
+    {
+        return;
+    }
+
+    if (auto* old_menu = mHiddenMenuHandle.get())
+    {
+        if (gMenuHolder)
+        {
+            gMenuHolder->removeChild(old_menu);
+        }
+        delete old_menu;
+        mHiddenMenuHandle.markDead();
+    }
+
+    LLContextMenu::Params menu_params;
+    menu_params.name(HIDDEN_MENU_NAME);
+    menu_params.visible(false);
+    LLContextMenu* menu = LLUICtrlFactory::create<LLContextMenu>(menu_params);
+    if (!menu)
+    {
+        return;
+    }
+
+    auto handle = getHandle();
+    const S32 count = mTabs->getTabCount();
+    for (S32 i = 0; i < count; ++i)
+    {
+        auto* inv_panel = dynamic_cast<LLInventoryPanel*>(mTabs->getPanelByIndex(i));
+        if (!inv_panel || !mHidden.count(inv_panel))
+        {
+            continue;
+        }
+
+        std::string label = computeDisplayLabel(inv_panel);
+        if (label.empty())
+        {
+            label = getDefaultTabName();
+        }
+
+        const std::string panel_name = inv_panel->getName();
+        LLMenuItemCallGL::Params item_params;
+        item_params.name(panel_name);
+        item_params.label(label);
+        item_params.on_click.function([handle, panel_name](LLUICtrl*, const LLSD&)
+        {
+            if (auto* self = handle.get())
+            {
+                if (self->mTabs)
+                {
+                    self->showTab(dynamic_cast<LLInventoryPanel*>(self->mTabs->getPanelByName(panel_name)));
+                }
+            }
+        });
+        menu->addChild(LLUICtrlFactory::create<LLMenuItemCallGL>(item_params));
+    }
+
+    mHiddenMenuHandle = menu->getHandle();
+    if (gMenuHolder)
+    {
+        gMenuHolder->addChild(menu);
+    }
+
+    if (auto* btn = findTabButton(mShowHiddenTabPanel))
+    {
+        S32 screen_x = 0;
+        S32 screen_y = 0;
+        btn->localPointToScreen(0, 0, &screen_x, &screen_y);
+        menu->show(screen_x, screen_y, btn);
+    }
+}
+
 void FSInventoryCustomTabs::noteActivePanel(LLInventoryPanel* panel)
 {
     if (mLastActivePanel && mLastActivePanel != panel && isCustomTab(mLastActivePanel))
@@ -266,7 +373,7 @@ void FSInventoryCustomTabs::noteActivePanel(LLInventoryPanel* panel)
         }
         save();
     }
-    if (panel && panel != mAddTabPanel && mTabs && mTabs->getIndexForPanel(panel) >= 0)
+    if (panel && panel != mAddTabPanel && panel != mShowHiddenTabPanel && mTabs && mTabs->getIndexForPanel(panel) >= 0)
     {
         mLastActivePanel = panel;
     }
@@ -329,7 +436,12 @@ bool FSInventoryCustomTabs::activePanelIsCustom(const LLPanelMainInventory* pare
 bool FSInventoryCustomTabs::maybeHandleAddTabSelected(LLPanelMainInventory* parent)
 {
     auto* self = instanceFor(parent);
-    if (!self || !parent->mFilterTabs || !self->isAddTab(parent->mFilterTabs->getCurrentPanel()))
+    if (!self || !parent->mFilterTabs)
+    {
+        return false;
+    }
+    const LLPanel* current = parent->mFilterTabs->getCurrentPanel();
+    if (!self->isAddTab(current) && !self->isShowHiddenTab(current))
     {
         return false;
     }
@@ -379,6 +491,12 @@ bool FSInventoryCustomTabs::handleMouseDown(LLPanelMainInventory* parent, S32 x,
 {
     auto* self = instanceFor(parent);
     return self && self->handleMouseDown(x, y);
+}
+
+bool FSInventoryCustomTabs::handleDragAndDrop(LLPanelMainInventory* parent, S32 x, S32 y)
+{
+    auto* self = instanceFor(parent);
+    return self && self->handleDragAndDrop(x, y);
 }
 
 void FSInventoryCustomTabs::onParentDraw(LLPanelMainInventory* parent)
@@ -453,6 +571,56 @@ void FSInventoryCustomTabs::installAddTab()
     }
 }
 
+void FSInventoryCustomTabs::installShowHiddenTab()
+{
+    if (!mTabs || mShowHiddenTabPanel)
+    {
+        return;
+    }
+
+    LLInventoryPanel::Params params;
+    params.name(SHOW_HIDDEN_PANEL_NAME);
+    params.sort_order_setting(LLInventoryPanel::INHERIT_SORT_ORDER);
+    params.preinitialize_views(false);
+    params.follows.flags(FOLLOWS_ALL);
+
+    mShowHiddenTabPanel = LLUICtrlFactory::create<LLInventoryPanel>(params);
+    if (!mShowHiddenTabPanel)
+    {
+        return;
+    }
+
+    auto where = LLTabContainer::END;
+    if (mAddTabPanel)
+    {
+        const S32 add_idx = mTabs->getIndexForPanel(mAddTabPanel);
+        if (add_idx >= 0)
+        {
+            where = static_cast<LLTabContainer::eInsertionPoint>(add_idx);
+        }
+    }
+
+    mTabs->addTabPanel(LLTabContainer::TabPanelParams().panel(mShowHiddenTabPanel).label(LLStringUtil::null).select_tab(false).insert_at(where));
+
+    if (auto* btn = findTabButton(mShowHiddenTabPanel))
+    {
+        const S32 height = btn->getRect().getHeight();
+        const S32 width = llmax(mTabs->getMinTabWidth() / 2, ADD_TAB_MIN_WIDTH);
+        btn->reshape(width, height);
+        btn->setLeftHPad(2);
+        btn->setRightHPad(2);
+        btn->setImageOverlay(std::string(SHOW_HIDDEN_ICON_NAME));
+        std::string tooltip;
+        if (LLTrans::findString(tooltip, SHOW_HIDDEN_PANEL_NAME) && !tooltip.empty())
+        {
+            btn->setToolTip(tooltip);
+        }
+        mShowHiddenClickConnection = btn->setClickedCallback(boost::bind(&FSInventoryCustomTabs::onShowHiddenClicked, this));
+    }
+
+    mTabs->setTabButtonVisible(mShowHiddenTabPanel, false);
+}
+
 LLInventoryPanel* FSInventoryCustomTabs::addTab(const std::string& explicit_name, const std::string& filter, bool select)
 {
     if (!mTabs || !mParent)
@@ -501,12 +669,13 @@ LLInventoryPanel* FSInventoryCustomTabs::addTab(const std::string& explicit_name
     const std::string& display_label = explicit_name.empty() ? auto_label : explicit_name;
 
     auto where = LLTabContainer::END;
-    if (mAddTabPanel)
+    LLPanel* anchor = mShowHiddenTabPanel ? static_cast<LLPanel*>(mShowHiddenTabPanel) : static_cast<LLPanel*>(mAddTabPanel);
+    if (anchor)
     {
-        const S32 add_idx = mTabs->getIndexForPanel(mAddTabPanel);
-        if (add_idx >= 0)
+        const S32 anchor_idx = mTabs->getIndexForPanel(anchor);
+        if (anchor_idx >= 0)
         {
-            where = static_cast<LLTabContainer::eInsertionPoint>(add_idx);
+            where = static_cast<LLTabContainer::eInsertionPoint>(anchor_idx);
         }
     }
 
@@ -665,23 +834,104 @@ void FSInventoryCustomTabs::onCloseConfirmed(const LLSD& notification, const LLS
 
     if (mTabs->getCurrentPanel() == to_remove)
     {
-        const S32 idx = mTabs->getIndexForPanel(to_remove);
-        if (idx > 0)
-        {
-            mTabs->selectTab(idx - 1);
-        }
-        else
-        {
-            mTabs->selectFirstTab();
-        }
+        selectNearestVisibleTab(to_remove);
     }
 
     mPanels.erase(to_remove);
     mExplicitlyNamed.erase(to_remove);
     mPendingRootOpen.erase(to_remove);
+    mHidden.erase(to_remove);
     mTabs->removeTabPanel(to_remove);
     to_remove->die();
+    updateShowHiddenTabVisibility();
     save();
+}
+
+void FSInventoryCustomTabs::onHideClicked()
+{
+    if (isCustomTab(mContextPanel))
+    {
+        hideTab(mContextPanel);
+    }
+}
+
+void FSInventoryCustomTabs::hideTab(LLInventoryPanel* panel)
+{
+    if (!mTabs || !isCustomTab(panel) || mHidden.count(panel))
+    {
+        return;
+    }
+    const bool was_active = (mTabs->getCurrentPanel() == panel);
+    mHidden.insert(panel);
+    mTabs->setTabButtonVisible(panel, false);
+    if (mContextPanel == panel)
+    {
+        mContextPanel = nullptr;
+    }
+    if (mLastActivePanel == panel)
+    {
+        mLastActivePanel = nullptr;
+    }
+    if (was_active)
+    {
+        selectNearestVisibleTab(panel);
+    }
+    updateShowHiddenTabVisibility();
+    save();
+}
+
+void FSInventoryCustomTabs::showTab(LLInventoryPanel* panel)
+{
+    if (!mTabs || !isCustomTab(panel) || !mHidden.count(panel))
+    {
+        return;
+    }
+    mHidden.erase(panel);
+    mTabs->setTabButtonVisible(panel, true);
+    updateShowHiddenTabVisibility();
+    mTabs->selectTabPanel(panel);
+    save();
+}
+
+void FSInventoryCustomTabs::updateShowHiddenTabVisibility()
+{
+    if (mTabs && mShowHiddenTabPanel)
+    {
+        mTabs->setTabButtonVisible(mShowHiddenTabPanel, !mHidden.empty());
+    }
+}
+
+void FSInventoryCustomTabs::selectNearestVisibleTab(LLInventoryPanel* skip_panel)
+{
+    if (!mTabs)
+    {
+        return;
+    }
+
+    const S32 skip_idx = mTabs->getIndexForPanel(skip_panel);
+    const S32 count = mTabs->getTabCount();
+    const auto selectable = [this](LLPanel* p) -> bool
+    {
+        return p && p != static_cast<LLPanel*>(mAddTabPanel) && p != static_cast<LLPanel*>(mShowHiddenTabPanel) && mTabs->getTabVisibility(p);
+    };
+
+    for (S32 i = skip_idx - 1; i >= 0; --i)
+    {
+        if (selectable(mTabs->getPanelByIndex(i)))
+        {
+            mTabs->selectTab(i);
+            return;
+        }
+    }
+    for (S32 i = skip_idx + 1; i < count; ++i)
+    {
+        if (selectable(mTabs->getPanelByIndex(i)))
+        {
+            mTabs->selectTab(i);
+            return;
+        }
+    }
+    mTabs->selectFirstTab();
 }
 
 void FSInventoryCustomTabs::clearCustomTabs()
@@ -696,7 +946,7 @@ void FSInventoryCustomTabs::clearCustomTabs()
     mLastActivePanel = nullptr;
 
     auto* current = mTabs->getCurrentPanel();
-    if (current && (current == mAddTabPanel || mPanels.count(dynamic_cast<LLInventoryPanel*>(current))))
+    if (current && (current == mAddTabPanel || current == mShowHiddenTabPanel || mPanels.count(dynamic_cast<LLInventoryPanel*>(current))))
     {
         mTabs->selectFirstTab();
     }
@@ -705,6 +955,7 @@ void FSInventoryCustomTabs::clearCustomTabs()
     mPanels.clear();
     mExplicitlyNamed.clear();
     mPendingRootOpen.clear();
+    mHidden.clear();
     for (auto* panel : panels_copy)
     {
         mTabs->removeTabPanel(panel);
@@ -713,6 +964,7 @@ void FSInventoryCustomTabs::clearCustomTabs()
 
     mLastActivePanel = nullptr;
     mContextPanel = nullptr;
+    updateShowHiddenTabVisibility();
 }
 
 // ---------------------------------------------------------------------------
@@ -747,6 +999,7 @@ void FSInventoryCustomTabs::doLoad()
     const LLSD tabs = gSavedPerAccountSettings.getLLSD(SETTING_KEY);
     if (!tabs.isArray())
     {
+        updateShowHiddenTabVisibility();
         mLoadedOk = true;
         return;
     }
@@ -806,9 +1059,16 @@ void FSInventoryCustomTabs::doLoad()
                     new_filter.setSearchType(static_cast<LLInventoryFilter::ESearchType>(states["search_type"].asInteger()));
                 }
             }
+
+            if (entry.has(TABHIDDEN_KEY) && entry[TABHIDDEN_KEY].asBoolean())
+            {
+                mHidden.insert(new_panel);
+                mTabs->setTabButtonVisible(new_panel, false);
+            }
         }
     }
 
+    updateShowHiddenTabVisibility();
     mLoadedOk = (added == attempted);
     if (!mLoadedOk)
     {
@@ -887,6 +1147,7 @@ void FSInventoryCustomTabs::save()
             entry["states"] = states_sd;
         }
 
+        entry[TABHIDDEN_KEY] = static_cast<bool>(mHidden.count(inv_panel));
         array.append(entry);
     }
 
@@ -912,7 +1173,7 @@ bool FSInventoryCustomTabs::isUnchangedSetting(const LLSD& array) const
     }
     for (LLSD::Integer i = 0; i < array.size(); ++i)
     {
-        if (current[i]["name"].asString() != array[i]["name"].asString() || current[i]["filter"].asString() != array[i]["filter"].asString() || !llsd_equals(current[i]["states"], array[i]["states"]))
+        if (current[i]["name"].asString() != array[i]["name"].asString() || current[i]["filter"].asString() != array[i]["filter"].asString() || current[i][TABHIDDEN_KEY].asBoolean() != array[i][TABHIDDEN_KEY].asBoolean() || !llsd_equals(current[i]["states"], array[i]["states"]))
         {
             return false;
         }
@@ -952,6 +1213,11 @@ bool FSInventoryCustomTabs::isAddTab(const LLPanel* panel) const
     return panel && panel == static_cast<const LLPanel*>(mAddTabPanel);
 }
 
+bool FSInventoryCustomTabs::isShowHiddenTab(const LLPanel* panel) const
+{
+    return panel && panel == static_cast<const LLPanel*>(mShowHiddenTabPanel);
+}
+
 LLButton* FSInventoryCustomTabs::findTabButton(const LLPanel* panel) const
 {
     if (!mTabs || !panel)
@@ -980,6 +1246,31 @@ LLInventoryPanel* FSInventoryCustomTabs::hitTestCustomTab(S32 x, S32 y, S32& tab
     }
     auto* inv_panel = dynamic_cast<LLInventoryPanel*>(mTabs->getPanelByIndex(idx));
     if (!inv_panel || !mPanels.count(inv_panel))
+    {
+        return nullptr;
+    }
+    return inv_panel;
+}
+
+LLInventoryPanel* FSInventoryCustomTabs::hitTestAddTab(S32 x, S32 y, S32& tab_local_x, S32& tab_local_y) const
+{
+    if (!mTabs || !mParent || !mAddTabPanel)
+    {
+        return nullptr;
+    }
+    tab_local_x = 0;
+    tab_local_y = 0;
+    if (!mParent->localPointToOtherView(x, y, &tab_local_x, &tab_local_y, mTabs))
+    {
+        return nullptr;
+    }
+    const S32 idx = mTabs->getTabContainedAtPoint(tab_local_x, tab_local_y);
+    if (idx < 0)
+    {
+        return nullptr;
+    }
+    auto* inv_panel = dynamic_cast<LLInventoryPanel*>(mTabs->getPanelByIndex(idx));
+    if (!isAddTab(inv_panel))
     {
         return nullptr;
     }

@@ -55,6 +55,7 @@
 
 #include "llweb.h"
 
+#include "llnotificationsutil.h" // <FS:TJ/> Detect and notify if the viewer is trying to run as admin on Windows
 #include "llviewernetwork.h"
 #include "llmd5.h"
 #include "llfindlocale.h"
@@ -84,6 +85,7 @@
 #include "BugSplat.h"
 #include "boost/json.hpp"                 // Boost.Json
 #include "llagent.h"                // for agent location
+#include "llmemory.h"
 #include "llstartup.h"
 #include "llviewerregion.h"
 #include "llvoavatarself.h"         // for agent name
@@ -234,6 +236,16 @@ namespace
             BugSplatAttributes::instance().setAttribute("AppState", LLStartUp::getStartupStateString());
             // Location
             // </FS:Beq>
+            const U32 avail_kb = LLMemory::getAvailableMemKB().value();
+            if (avail_kb != U32_MAX) // filter out initial values, if one is not set, all are not set
+            {
+                // Memory usage at crash time (can be 1s obsolete)
+                sBugSplatSender->setAttribute(WCSTR(L"MemAllocatedKB"), WCSTR(std::to_string(LLMemory::getAllocatedMemKB().value())));
+                sBugSplatSender->setAttribute(WCSTR(L"MemAvailableKB"), WCSTR(std::to_string(LLMemory::getAvailableMemKB().value())));
+                sBugSplatSender->setAttribute(WCSTR(L"MemMaxPhysicalKB"), WCSTR(std::to_string(LLMemory::getMaxMemKB().value())));
+                sBugSplatSender->setAttribute(WCSTR(L"MemAvailCommitMB"), WCSTR(std::to_string(LLMemory::getAvailableCommitMemMB().value())));
+            }
+
             if (gAgent.getRegion())
             {
                 // region location, when we have it
@@ -260,6 +272,7 @@ namespace
             // </FS:Beq>
 
             LLAppViewer* app = LLAppViewer::instance();
+
             if (!app->isSecondInstance() && !app->errorMarkerExists())
             {
                 // If marker doesn't exist, create a marker with 'other' or 'logout' code for next launch
@@ -1060,6 +1073,11 @@ bool LLAppViewerWin32::init()
     if( !success )
         success = LLAppViewer::init();
 
+    // <FS:TJ> Detect and notify if the viewer is trying to run as admin on Windows
+    if (success)
+        detectRunningAsAdmin();
+    // </FS:TJ>
+
     return success;
 }
 
@@ -1404,3 +1422,33 @@ void LLAppViewerWin32::startCachePurge()
         SetThreadPriority( hThread, THREAD_MODE_BACKGROUND_BEGIN );
 }
 // </FS:ND>
+
+// <FS:TJ> Detect and notify if the viewer is trying to run as admin on Windows
+void LLAppViewerWin32::detectRunningAsAdmin()
+{
+    bool elevated = false;
+    HANDLE elevation_token = nullptr;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &elevation_token))
+    {
+        DWORD size = 0;
+        TOKEN_ELEVATION elevation{};
+
+        if (GetTokenInformation(elevation_token, TokenElevation, &elevation, sizeof(elevation), &size))
+            elevated = (elevation.TokenIsElevated != 0);
+
+        CloseHandle(elevation_token);
+    }
+    else
+    {
+        LL_WARNS() << "Couldn't open the access token for the current process: " << GetLastError() << LL_ENDL;
+    }
+
+    // There is no need to check the child processes (slplugin.exe and dullahan_host.exe)
+    // as they will fail to run if ran as admin when the viewer isn't, and therefore can't be checked
+    if (elevated)
+    {
+        LL_WARNS() << "A viewer process is running with administrator privileges which will cause problems." << LL_ENDL;
+        LLNotificationsUtil::add("ViewerProcessRunningAsAdmin");
+    }
+}
+// </FS:TJ>

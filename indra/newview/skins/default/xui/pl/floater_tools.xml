@@ -25,7 +25,7 @@
 		Kliknij i przeciągnij, aby zaznaczyć teren
 	</floater.string>
 	<floater.string name="status_selectcount">
-		[OBJ_COUNT] zaznaczonych obiektów, wpływ na strefę: [LAND_IMPACT]
+		[OBJ_COUNT] zaznaczonych obiektów, wpływ na strefę: [LAND_IMPACT], prim: [PRIM_COUNT]
 	</floater.string>
 	<floater.string name="status_remaining_capacity">
 		Pojemność pozostała: [LAND_CAPACITY].
@@ -490,6 +490,7 @@ Nis ↔ Najniż
 		<!-- <panel label="Tekstura" name="Texture"/> -->
 		<panel label="Zawart." name="Contents">
 			<button label="Nowy skrypt" label_selected="Nowy skrypt" name="button new script"/>
+			<button label="Nowa notka" label_selected="Nowa notka" name="button new notecard" />
 			<button label="Prawa" name="button permissions"/>
 			<button label="Odśwież" name="button refresh"/>
 			<button label="Resetuj skrypty" name="btn_reset_scripts"/>

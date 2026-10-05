@@ -1704,6 +1704,9 @@ https://www.firestormviewer.org/support aby uzyskać pomoc.
 	<string name="FSInventoryCustomTabDefaultName">
 		Własny
 	</string>
+	<string name="FSInventoryCustomTabShowHidden">
+		Pokaż ukryte zakładki
+	</string>
 	<string name="PlacesNoMatchingItems">
 		Aby dodać miejsce do landmarków, kliknij gwiazdkę po prawej stronie nazwy lokalizacji.
 	</string>
@@ -1724,6 +1727,9 @@ https://www.firestormviewer.org/support aby uzyskać pomoc.
 	</string>
 	<string name="InventoryNoTexture">
 		Nie posiadasz kopii tej tekstury w swojej Szafie.
+	</string>
+	<string name="InventoryNoMaterial">
+		Nie posiadasz kopii tego materiału w swojej Szafie.
 	</string>
 	<string name="Unconstrained">
 		Swobodny
@@ -3085,7 +3091,7 @@ Oczekiwane .wav, .tga, .bmp, .jpg, .jpeg, lub .anim
 		Uruchom/Zatrzymaj media
 	</string>
 	<string name="StreamtitleNowPlaying">
-		Teraz odtwarzane:
+		Teraz odtwarzane: [TITLE]
 	</string>
 	<string name="MBCmdLineError">
 		Podczas realizacji podanej komendy wystąpił błąd.
@@ -6782,5 +6788,8 @@ Twoja aktualna pozycja: [AVATAR_POS]
 	</string>
 	<string name="FSAvatarAlignToggleFull">
 		Pełne
+	</string>
+	<string name="FSMacOSNewViewerInstance">
+		Nowa instancja przeglądarki
 	</string>
 </strings>

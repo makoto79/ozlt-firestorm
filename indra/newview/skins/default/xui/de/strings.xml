@@ -1723,6 +1723,9 @@ https://www.firestormviewer.org/support für Hilfe zum Lösen des Problems.
 	<string name="FSInventoryCustomTabDefaultName">
 		Eigene
 	</string>
+	<string name="FSInventoryCustomTabShowHidden">
+		Ausgeblendete Reiter anzeigen
+	</string>
 	<string name="PlacesNoMatchingItems">
 		Sie haben nicht das Richtige gefunden? Versuchen Sie es mit der [secondlife:///app/search/places/[SEARCH_TERM] Suche].
 	</string>
@@ -3192,7 +3195,7 @@ Gültige Formate: .wav, .tga, .bmp, .jpg, .jpeg oder .anim
 		Medien Abspielen/Pausieren
 	</string>
 	<string name="StreamtitleNowPlaying">
-		Aktueller Titel:
+		Aktueller Titel: [TITLE]
 	</string>
 	<string name="IntelDriverPage">
 		http://www.intel.com/p/de_DE/support/detect/graphics
@@ -7408,5 +7411,8 @@ Ihre aktuelle Position: [AVATAR_POS]
 	</string>
 	<string name="FSAvatarAlignToggleFull">
 		Voll
+	</string>
+	<string name="FSMacOSNewViewerInstance">
+		Neue Viewer-Instanz
 	</string>
 </strings>

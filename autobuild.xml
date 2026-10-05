@@ -720,11 +720,11 @@
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>2c81fa7aa03b427088ab54ce3b71088a0003126b</string>
+              <string>b7255a36fa9af6ac311645da2f291195679f7bae</string>
               <key>hash_algorithm</key>
               <string>sha1</string>
               <key>url</key>
-              <string>https://github.com/secondlife/dullahan/releases/download/v1.26.0-CEF_139.0.40/dullahan-1.26.0.202510161627_139.0.40_g465474a_chromium-139.0.7258.139-darwin64-18568015445.tar.zst</string>
+              <string>https://github.com/secondlife/dullahan/releases/download/v1.50.0-CEF_152.0.6.83/dullahan-1.50.0.202609160023_152.0.6_g708dc14_chromium-152.0.7977.83-darwin64-35039647119.tar.zst</string>
             </map>
             <key>name</key>
             <string>darwin64</string>
@@ -734,11 +734,11 @@
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>8e06d060729250c5bfcb993c8f818f36ea17de16</string>
+              <string>c8f92179257a12382a31187eda9a84747f6cbe38</string>
               <key>hash_algorithm</key>
               <string>sha1</string>
               <key>url</key>
-              <string>https://github.com/secondlife/dullahan/releases/download/v1.26.0-CEF_139.0.40/dullahan-1.26.0.202510161627_139.0.40_g465474a_chromium-139.0.7258.139-linux64-18568015445.tar.zst</string>
+              <string>https://github.com/secondlife/dullahan/releases/download/v1.50.0-CEF_152.0.6.83/dullahan-1.50.0.202609160023_152.0.6_g708dc14_chromium-152.0.7977.83-linux64-35039647119.tar.zst</string>
             </map>
             <key>name</key>
             <string>linux64</string>
@@ -748,11 +748,11 @@
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>7ca6db37f019b47e230c0861607c546d45535367</string>
+              <string>7d5826579fb88b9d5d855d68d614947c1958a401</string>
               <key>hash_algorithm</key>
               <string>sha1</string>
               <key>url</key>
-              <string>https://github.com/secondlife/dullahan/releases/download/v1.26.0-CEF_139.0.40/dullahan-1.26.0.202510161628_139.0.40_g465474a_chromium-139.0.7258.139-windows64-18568015445.tar.zst</string>
+              <string>https://github.com/secondlife/dullahan/releases/download/v1.50.0-CEF_152.0.6.83/dullahan-1.50.0.202609160023_152.0.6_g708dc14_chromium-152.0.7977.83-windows64-35039647119.tar.zst</string>
             </map>
             <key>name</key>
             <string>windows64</string>
@@ -765,7 +765,7 @@
         <key>copyright</key>
         <string>Copyright (c) 2017, Linden Research, Inc.</string>
         <key>version</key>
-        <string>1.26.0.202510161627_139.0.40_g465474a_chromium-139.0.7258.139</string>
+        <string>1.50.0.202609160023_152.0.6_g708dc14_chromium-152.0.7977.83</string>
         <key>name</key>
         <string>dullahan</string>
         <key>description</key>
@@ -2930,11 +2930,11 @@ Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors</string>
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>7338377a9c6913bc8768d446fe627b8176bc89d4</string>
+              <string>8590471da4019b8a6eb894747058466570c97785</string>
               <key>hash_algorithm</key>
               <string>sha1</string>
               <key>url</key>
-              <string>https://github.com/secondlife/3p-webrtc-build/releases/download/m137.7151.04.23/webrtc-m137.7151.04.23.22004231636-darwin64-22004231636.tar.zst</string>
+              <string>https://github.com/secondlife/3p-webrtc-build/releases/download/m144.7559.06.20/webrtc-m144.7559.06.20.36004322351-darwin64-36004322351.tar.zst</string>
             </map>
             <key>name</key>
             <string>darwin64</string>
@@ -2944,11 +2944,11 @@ Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors</string>
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>a2df83ed8d7fc1374398d7a37633bae17f5d68a1</string>
+              <string>2baa19cebc78b0009e919fb7a4fc74674ff44eae</string>
               <key>hash_algorithm</key>
               <string>sha1</string>
               <key>url</key>
-              <string>https://github.com/secondlife/3p-webrtc-build/releases/download/m137.7151.04.23/webrtc-m137.7151.04.23.22004231636-linux64-22004231636.tar.zst</string>
+              <string>https://github.com/secondlife/3p-webrtc-build/releases/download/m144.7559.06.20/webrtc-m144.7559.06.20.36004322351-linux64-36004322351.tar.zst</string>
             </map>
             <key>name</key>
             <string>linux64</string>
@@ -2958,11 +2958,11 @@ Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors</string>
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>665c2447c794a88542fab30638f0013bea58480c</string>
+              <string>4838e91071b6cb8169f1987418a483b28d2513c7</string>
               <key>hash_algorithm</key>
               <string>sha1</string>
               <key>url</key>
-              <string>https://github.com/secondlife/3p-webrtc-build/releases/download/m137.7151.04.23/webrtc-m137.7151.04.23.22004231636-windows64-22004231636.tar.zst</string>
+              <string>https://github.com/secondlife/3p-webrtc-build/releases/download/m144.7559.06.20/webrtc-m144.7559.06.20.36004322351-windows64-36004322351.tar.zst</string>
             </map>
             <key>name</key>
             <string>windows64</string>
@@ -2975,7 +2975,7 @@ Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors</string>
         <key>copyright</key>
         <string>Copyright (c) 2011, The WebRTC project authors. All rights reserved.</string>
         <key>version</key>
-        <string>m137.7151.04.23.22004231636</string>
+        <string>m144.7559.06.19.hot-mic.29761579711</string>
         <key>name</key>
         <string>webrtc</string>
         <key>vcs_branch</key>
@@ -3220,11 +3220,11 @@ Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors</string>
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>91abbc360640b5b2e0a4c001a36ad411a9a42602</string>
+              <string>df2260187110aa51c20101183e18a55f86e71090</string>
               <key>hash_algorithm</key>
               <string>sha1</string>
               <key>url</key>
-              <string>https://github.com/secondlife-3p/3p-velopack/releases/download/v0.0.1535/velopack-40232ef.23500976684-windows64-23500976684.tar.zst</string>
+              <string>https://github.com/secondlife-3p/3p-velopack/releases/download/v0.0.1535-r2/velopack-40232ef.24685318450-windows64-24685318450.tar.zst</string>
             </map>
             <key>name</key>
             <string>windows64</string>
@@ -3234,11 +3234,11 @@ Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors</string>
             <key>archive</key>
             <map>
               <key>hash</key>
-              <string>05563a79bdeb83d66a72ac1e97587dc2a8f64511</string>
+              <string>ead94386d7b9a143824d7ccedc86433127028a91</string>
               <key>hash_algorithm</key>
               <string>sha1</string>
               <key>url</key>
-              <string>https://github.com/secondlife-3p/3p-velopack/releases/download/v0.0.1535/velopack-40232ef.23500976684-darwin64-23500976684.tar.zst</string>
+              <string>https://github.com/secondlife-3p/3p-velopack/releases/download/v0.0.1535-r2/velopack-40232ef.24685318450-darwin64-24685318450.tar.zst</string>
             </map>
             <key>name</key>
             <string>darwin64</string>
@@ -3251,7 +3251,7 @@ Copyright (c) 2012, 2014, 2015, 2016 nghttp2 contributors</string>
         <key>copyright</key>
         <string>Velopack Ltd.</string>
         <key>version</key>
-        <string>40232ef.23500976684</string>
+        <string>40232ef.24685318450</string>
         <key>name</key>
         <string>velopack</string>
         <key>description</key>

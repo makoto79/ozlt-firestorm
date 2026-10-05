@@ -76,11 +76,13 @@ struct LLFontGlyphInfo
 
     U32 mGlyphIndex;
     EFontGlyphType mGlyphType;
+    llwchar mChar;
+
 
     // Metrics
     S32 mWidth;         // In pixels
     S32 mHeight;        // In pixels
-    F32 mXAdvance;      // In pixels
+    F32 mXAdvanceRaw;   // In pixels, don't use directly, use getXAdvance() for tabular numbers to work correctly.
     F32 mYAdvance;      // In pixels
 
     // Information for actually rendering
@@ -103,7 +105,9 @@ public:
 
     // is_fallback should be true for fallback fonts that aren't used
     // to render directly (Unicode backup, primarily)
-    bool loadFace(const std::string& filename, F32 point_size, F32 vert_dpi, F32 horz_dpi, S32 weight, bool is_fallback, S32 face_n, EFontHinting hinting, S32 flags);
+    // <FS:Ansariel> Optional tabular numeric font rendering
+    //bool loadFace(const std::string& filename, F32 point_size, F32 vert_dpi, F32 horz_dpi, S32 weight, bool is_fallback, S32 face_n, EFontHinting hinting, S32 flags);
+    bool loadFace(const std::string& filename, F32 point_size, F32 vert_dpi, F32 horz_dpi, S32 weight, bool is_fallback, S32 face_n, EFontHinting hinting, S32 flags, bool tabnum);
 
     S32 getNumFaces(const std::string& filename);
 
@@ -147,6 +151,14 @@ public:
     F32 getXKerning(llwchar char_left, llwchar char_right) const; // Get the kerning between the two characters
     F32 getXKerning(const LLFontGlyphInfo* left_glyph_info, const LLFontGlyphInfo* right_glyph_info) const; // Get the kerning between the two characters
 
+    F32 getMaxDigitWidth() const { return mMaxDigitWidth; }
+    S32 getFontWeight() const { return mWeight; }
+
+    // <FS:Ansariel> Optional tabular numeric font rendering
+    bool isTabnum() const { return mTabnum; }
+    void setTabnum(bool value) { mTabnum = value; }
+    // </FS:Ansariel>
+
     LLFontGlyphInfo* getGlyphInfo(llwchar wch, EFontGlyphType glyph_type) const;
 
     void reset(F32 vert_dpi, F32 horz_dpi);
@@ -184,6 +196,7 @@ private:
     F32 mAscender;
     F32 mDescender;
     F32 mLineHeight;
+    mutable F32 mMaxDigitWidth;
 
     LLFT_Face mFTFace;
 
@@ -191,6 +204,7 @@ private:
     EFontHinting mHinting;
     S32 mFontFlags;
     S32 mWeight = -1;
+    bool mTabnum{ false }; // <FS:Ansariel> Optional tabular numeric font rendering
     typedef std::pair<LLPointer<LLFontFreetype>, char_functor_t> fallback_font_t;
     typedef std::vector<fallback_font_t> fallback_font_vector_t;
     fallback_font_vector_t mFallbackFonts; // A list of fallback fonts to look for glyphs in (for Unicode chars)

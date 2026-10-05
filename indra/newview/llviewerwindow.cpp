@@ -216,6 +216,7 @@
 // </FS:Ansariel> [FS communication UI]
 #include "llwindowlistener.h"
 #include "llviewerwindowlistener.h"
+#include "llstatslistener.h"
 #include "llcleanup.h"
 #include "llimview.h"
 
@@ -1876,25 +1877,17 @@ bool LLViewerWindow::handleTimerEvent(LLWindow *window)
     return false;
 }
 
-// <FS:Dax> [FIRE-10419] Added deviceRemoved bool to prevent reinitialize on disconnect.
-// bool LLViewerWindow::handleDeviceChange(LLWindow* window)
-// {
-//     if (!LLViewerJoystick::getInstance()->isJoystickInitialized())
-//     {
-//         LLViewerJoystick::getInstance()->init(true);
-//         return true;
-//     }
-//     return false;
-// }
-// </FS>
-
-bool LLViewerWindow::handleDeviceChange(LLWindow *window, bool deviceRemoved) 
+bool LLViewerWindow::handleDeviceChange(LLWindow *window, const std::string& change_type, bool deviceIsJoystick, bool deviceRemoved) // <FS:Dax> [FIRE-10419] Added deviceRemoved bool to prevent reinitialize on disconnect.
 {
     // give a chance to use a joystick after startup (hot-plugging)
-    if (!deviceRemoved && !LLViewerJoystick::getInstance()->isJoystickInitialized())
+    if (deviceIsJoystick && !deviceRemoved && !LLViewerJoystick::getInstance()->isJoystickInitialized()) // <FS:Dax> [FIRE-10419] Added deviceRemoved bool to prevent reinitialize on disconnect.
     {
         LLViewerJoystick::getInstance()->init(true);
         return true;
+    }
+    else
+    {
+        LL_INFOS("Window") << "Device change event: " << change_type << LL_ENDL;
     }
     return false;
 }
@@ -1917,6 +1910,7 @@ bool LLViewerWindow::handleDPIChanged(LLWindow *window, F32 ui_scale_factor, S32
 
 bool LLViewerWindow::handleDisplayChanged()
 {
+    LL_INFOS("Window") << "Display change event" << LL_ENDL;
     LLFontGL::sResolutionGeneration++;
     return false;
 }
@@ -1999,6 +1993,7 @@ LLViewerWindow::LLViewerWindow(const Params& p)
     LLWindowListener::KeyboardGetter getter = [](){ return gKeyboard; };
     mWindowListener = std::make_unique<LLWindowListener>(this, getter);
     mViewerWindowListener = std::make_unique<LLViewerWindowListener>(this);
+    mStatsListener = std::make_unique<LLStatsListener>();
 
     mSystemChannel.reset(new LLNotificationChannel("System", "Visible", LLNotificationFilters::includeEverything));
     mCommunicationChannel.reset(new LLCommunicationChannel("Communication", "Visible"));
@@ -6223,8 +6218,24 @@ bool LLViewerWindow::rawSnapshot(LLImageRaw *raw, S32 image_width, S32 image_hei
     S32 original_width = 0;
     S32 original_height = 0;
     bool reset_deferred = false;
+    F32 original_fov = LLViewerCamera::getInstance()->getView();
 
     LLRenderTarget scratch_space;
+
+    // Lambda to restore deferred if needed when finished or in the case of early return
+    auto restore_deferred = [&]()
+    {
+        if (reset_deferred)
+        {
+            mWorldViewRectRaw = window_rect;
+            LLViewerCamera::getInstance()->setViewNoBroadcast(original_fov);
+            LLViewerCamera::getInstance()->setViewHeightInPixels(mWorldViewRectRaw.getHeight());
+            LLViewerCamera::getInstance()->setAspect(getWorldViewAspectRatio());
+            scratch_space.flush();
+            scratch_space.release();
+            gPipeline.allocateScreenBuffer(original_width, original_height);
+        }
+    };
 
     F32 scale_factor = 1.0f ;
     if (!keep_window_aspect || (image_width > window_width) || (image_height > window_height))
@@ -6248,6 +6259,14 @@ bool LLViewerWindow::rawSnapshot(LLImageRaw *raw, S32 image_width, S32 image_hei
                     snapshot_width = image_width;
                     snapshot_height = image_height;
                     reset_deferred = true;
+
+                    F32 window_aspect = (F32)window_rect.getWidth() / (F32)window_rect.getHeight();
+                    F32 image_aspect  = (F32)image_width / (F32)image_height;
+                    if (image_aspect > window_aspect)
+                    {
+                        F32 crop = window_aspect / image_aspect;
+                        LLViewerCamera::getInstance()->setViewNoBroadcast(2.f * atanf(tanf(original_fov * 0.5f) * crop));
+                    }
                     mWorldViewRectRaw.set(0, image_height, image_width, 0);
                     LLViewerCamera::getInstance()->setViewHeightInPixels( mWorldViewRectRaw.getHeight() );
                     LLViewerCamera::getInstance()->setAspect( getWorldViewAspectRatio() );
@@ -6298,12 +6317,14 @@ bool LLViewerWindow::rawSnapshot(LLImageRaw *raw, S32 image_width, S32 image_hei
     }
     else
     {
+        restore_deferred();
         setBalanceVisible(true);
         return false;
     }
 
     if (raw->isBufferInvalid())
     {
+        restore_deferred();
         setBalanceVisible(true);
         return false;
     }
@@ -6500,16 +6521,7 @@ bool LLViewerWindow::rawSnapshot(LLImageRaw *raw, S32 image_width, S32 image_hei
         gPipeline.resetDrawOrders();
     }
 
-    if (reset_deferred)
-    {
-        mWorldViewRectRaw = window_rect;
-        LLViewerCamera::getInstance()->setViewHeightInPixels( mWorldViewRectRaw.getHeight() );
-        LLViewerCamera::getInstance()->setAspect( getWorldViewAspectRatio() );
-        scratch_space.flush();
-        scratch_space.release();
-        gPipeline.allocateScreenBuffer(original_width, original_height);
-
-    }
+    restore_deferred();
 
     if (high_res)
     {
@@ -6931,30 +6943,39 @@ void LLViewerWindow::initTextures(S32 location_id)
     }
 }
 
+// <FS:Zi> Fade teleport screens
+//void LLViewerWindow::setShowProgress(const bool show)
+//{
+//    if (mProgressView)
+//    {
+//        mProgressView->setVisible(show);
+//    }
+//}
 void LLViewerWindow::setShowProgress(const bool show, bool fullscreen)
 {
-    if(show)
+    if (show)
     {
-        if(fullscreen)
+        if (mProgressViewMini && !fullscreen)
+            mProgressViewMini->setVisible(true);
+
+        if (mProgressView)
         {
-            if(mProgressView)
+            if (LLAppViewer::instance()->quitRequested())
+                mProgressView->setVisible(true); // Fix pink screen when quitting the viewer
+            else if (fullscreen)
                 mProgressView->fade(true);
-        }
-        else
-        {
-            if(mProgressViewMini)
-                mProgressViewMini->setVisible(true);
         }
     }
     else
     {
-        if(mProgressView && mProgressView->getVisible())
+        if (mProgressView && mProgressView->getVisible())
             mProgressView->fade(false);
 
-        if(mProgressViewMini)
+        if (mProgressViewMini)
             mProgressViewMini->setVisible(false);
     }
 }
+// </FS:Zi>
 
 void LLViewerWindow::setStartupComplete()
 {

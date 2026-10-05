@@ -876,7 +876,6 @@ static void on_first_run(void* p_user_data, const char* app_version)
     MultiByteToWideChar(CP_UTF8, 0, app_version, -1, &version[0], len);
 
     register_uninstall_info(install_dir, app_name, version);
-
     // Drop install related settings
     // Unfortunately gDirUtilp is not initialized yet and it's shouldn't
     // be possible to change location of the settings. For now it's simpler
@@ -891,7 +890,10 @@ static void on_first_run(void* p_user_data, const char* app_version)
             app_data_path.pop_back();
         }
 
-        std::string user_settings_path = app_data_path + "\\SecondLife\\user_settings\\settings.xml";
+        // <FS:TJ> Look for Firestorms settings.xml and not LL's
+        //std::string user_settings_path = app_data_path + "\\SecondLife\\user_settings\\settings.xml";
+        std::string user_settings_path = app_data_path + "\\Firestorm_x64\\user_settings\\settings.xml";
+        // </FS:TJ>
         LLControlGroup settings("global");
         if (settings.loadFromFile(user_settings_path))
         {

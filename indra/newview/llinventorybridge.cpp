@@ -2127,14 +2127,11 @@ void LLItemBridge::doShowOnMap(LLLandmark* landmark)
 
 void copy_slurl_to_clipboard_callback_inv(const std::string& slurl)
 {
-    // <FS:Zi> FIRE-31645 - Copy SLURL can fail, let the user know
     if (slurl.empty())
     {
         LLNotificationsUtil::add("LandmarkLocationUnknown");
         return;
     }
-    // </FS:Zi>
-
     gViewerWindow->getWindow()->copyTextToClipboard(utf8str_to_wstring(slurl));
     LLSD args;
     args["SLURL"] = slurl;
@@ -9404,10 +9401,14 @@ public:
             switch (type)
             {
             case LLSettingsType::ST_SKY:
-                LLFloaterReg::showInstance("env_fixed_environmentent_sky", LLSDMap("inventory_id", item->getUUID()), TAKE_FOCUS_YES);
+                // <FS:Ansariel> Compact environment edit floater option
+                //LLFloaterReg::showInstance("env_fixed_environmentent_sky", LLSDMap("inventory_id", item->getUUID()), TAKE_FOCUS_YES);
+                LLFloaterReg::showInstance(gSavedSettings.getBOOL("FSUseCompactEnvironmentFloaters") ? "fs_env_fixed_environmentent_sky" : "env_fixed_environmentent_sky", LLSDMap("inventory_id", item->getUUID()), TAKE_FOCUS_YES);
                 break;
             case LLSettingsType::ST_WATER:
-                LLFloaterReg::showInstance("env_fixed_environmentent_water", LLSDMap("inventory_id", item->getUUID()), TAKE_FOCUS_YES);
+                // <FS:Ansariel> Compact environment edit floater option
+                //LLFloaterReg::showInstance("env_fixed_environmentent_water", LLSDMap("inventory_id", item->getUUID()), TAKE_FOCUS_YES);
+                LLFloaterReg::showInstance(gSavedSettings.getBOOL("FSUseCompactEnvironmentFloaters") ? "fs_env_fixed_environmentent_water" : "env_fixed_environmentent_water", LLSDMap("inventory_id", item->getUUID()), TAKE_FOCUS_YES);
                 break;
             case LLSettingsType::ST_DAYCYCLE:
                 LLFloaterReg::showInstance("env_edit_extdaycycle", LLSDMap("inventory_id", item->getUUID())("edit_context", "inventory"), TAKE_FOCUS_YES);
